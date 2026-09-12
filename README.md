@@ -1,0 +1,1 @@
+The service that uses post-quantum cryptography and stores nothing on the server. I plan to use Rust and Vite.js
