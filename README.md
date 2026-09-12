@@ -37,7 +37,3 @@ The server exposes a tiny API and, in production, serves the built SPA:
 Ciphertext, nonce, filename, MIME type and content kind are **all inside the
 encrypted blob**. The database only stores the ciphertext, a nonce, timestamps,
 and the view counter.
-
-
-This may change in the future. I'm just brainstorming, so don't expect anything
-to work yet.
