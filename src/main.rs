@@ -23,8 +23,21 @@ use sqlx::{
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
     Row, SqlitePool,
 };
+use rand::Rng;
 use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
-use uuid::Uuid;
+
+/// Alphabet for short share IDs (URL-safe, no look-alike separators).
+const ID_ALPHABET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+/// Short-ID length. 62^12 ≈ 3.2e21 (~71 bits): unguessable, collision-free at
+/// any realistic volume, yet far shorter than a 36-char UUID.
+const ID_LEN: usize = 12;
+
+fn generate_id() -> String {
+    let mut rng = rand::thread_rng();
+    (0..ID_LEN)
+        .map(|_| ID_ALPHABET[rng.gen_range(0..ID_ALPHABET.len())] as char)
+        .collect()
+}
 
 const MAX_BODY: usize = 16 * 1024 * 1024; /// TODO: make this configurable via env var
 const MIN_EXPIRES: i64 = 60; /// TODO: make this configurable via env var
@@ -100,28 +113,40 @@ async fn create_secret(
         }
     }
 
-    let id = Uuid::new_v4().to_string();
     let now = now_secs();
     let expires_at = now + req.expires_in;
 
-    sqlx::query(
-        "INSERT INTO secrets (id, ciphertext, nonce, created_at, expires_at, max_views, views) \
-         VALUES (?, ?, ?, ?, ?, ?, 0)",
-    )
-    .bind(&id)
-    .bind(&req.ciphertext)
-    .bind(&req.nonce)
-    .bind(now)
-    .bind(expires_at)
-    .bind(req.max_views)
-    .execute(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("insert failed: {e}");
-        err(StatusCode::INTERNAL_SERVER_ERROR, "storage error")
-    })?;
+    // Generate a short random ID, retrying on the astronomically unlikely event
+    // of a primary-key collision.
+    for _ in 0..6 {
+        let id = generate_id();
+        let res = sqlx::query(
+            "INSERT INTO secrets (id, ciphertext, nonce, created_at, expires_at, max_views, views) \
+             VALUES (?, ?, ?, ?, ?, ?, 0)",
+        )
+        .bind(&id)
+        .bind(&req.ciphertext)
+        .bind(&req.nonce)
+        .bind(now)
+        .bind(expires_at)
+        .bind(req.max_views)
+        .execute(&state.pool)
+        .await;
 
-    Ok((StatusCode::CREATED, Json(CreateResp { id })))
+        match res {
+            Ok(_) => return Ok((StatusCode::CREATED, Json(CreateResp { id }))),
+            Err(sqlx::Error::Database(e)) if e.is_unique_violation() => continue,
+            Err(e) => {
+                tracing::error!("insert failed: {e}");
+                return Err(err(StatusCode::INTERNAL_SERVER_ERROR, "storage error"));
+            }
+        }
+    }
+
+    Err(err(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "could not allocate id",
+    ))
 }
 
 async fn read_secret(

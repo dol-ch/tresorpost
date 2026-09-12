@@ -10,7 +10,7 @@ function parseRoute(): Route {
   const hash = window.location.hash.replace(/^#/, "");
   // Expected view route: /v/<id>/<key>
   const parts = hash.split("/").filter(Boolean);
-  if (parts[0] === "v" && parts[1] && parts[2]) {
+  if ((parts[0] === "s" || parts[0] === "v") && parts[1] && parts[2]) {
     return { name: "view", id: parts[1], key: parts.slice(2).join("/") };
   }
   return { name: "create" };
