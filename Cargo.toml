@@ -2,7 +2,7 @@
 name = "tresorpost"
 version = "0.1.0"
 edition = "2024"
-description = "End-to-end encrypted, quantum-resistant, burn-after-reading transfer service"
+description = "Tresorpost — end-to-end encrypted, quantum-resistant, burn-after-reading transfer service"
 
 [[bin]]
 name = "tresorpost"
