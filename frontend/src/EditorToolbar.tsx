@@ -21,6 +21,16 @@ function blockActive(
   return to <= $from.end() && $from.parent.hasMarkup(type, attrs);
 }
 
+// True when the selection is anywhere inside a node of the given type
+// (e.g. within a list or a blockquote, which wrap other blocks).
+function wrappedIn(state: EditorState, type: NodeType): boolean {
+  const { $from } = state.selection;
+  for (let d = $from.depth; d > 0; d--) {
+    if ($from.node(d).type === type) return true;
+  }
+  return false;
+}
+
 function canRun(view: EditorView, cmd: Command): boolean {
   return cmd(view.state, undefined, view);
 }
@@ -203,21 +213,23 @@ export function EditorToolbar({ view }: { view: EditorView }) {
         key: "bullet",
         title: "Bullet list",
         content: <Svg>{I.list}</Svg>,
-        enabled: canRun(view, wrapInList(bullet)),
+        active: wrappedIn(state, bullet),
+        enabled: canRun(view, wrapInList(bullet)) || wrappedIn(state, bullet),
         onRun: () => run(view, wrapInList(bullet)),
       },
       {
         key: "ordered",
         title: "Numbered list",
         content: <Svg>{I.listOrdered}</Svg>,
-        enabled: canRun(view, wrapInList(ordered)),
+        active: wrappedIn(state, ordered),
+        enabled: canRun(view, wrapInList(ordered)) || wrappedIn(state, ordered),
         onRun: () => run(view, wrapInList(ordered)),
       },
       {
         key: "quote",
         title: "Quote",
         content: <Svg>{I.quote}</Svg>,
-        active: blockActive(state, quote),
+        active: wrappedIn(state, quote),
         enabled: canRun(view, wrapIn(quote)),
         onRun: () => run(view, wrapIn(quote)),
       },
