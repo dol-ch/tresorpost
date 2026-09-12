@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import QRCode from "qrcode";
 import { RichTextEditor, type EditorHandle } from "./Editor";
 import {
   generateKey,
@@ -23,9 +24,25 @@ export function CreatePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [qr, setQr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const editorRef = useRef<EditorHandle>(null);
+
+  useEffect(() => {
+    if (!shareUrl) {
+      setQr(null);
+      return;
+    }
+    QRCode.toDataURL(shareUrl, {
+      margin: 1,
+      width: 320,
+      errorCorrectionLevel: "M",
+      color: { dark: "#111111", light: "#ffffff" },
+    })
+      .then(setQr)
+      .catch(() => setQr(null));
+  }, [shareUrl]);
 
   function reset() {
     setShareUrl(null);
@@ -66,7 +83,7 @@ export function CreatePage() {
       });
 
       const keyUrl = bytesToBase64Url(key);
-      const url = `${window.location.origin}/#/v/${id}/${keyUrl}`;
+      const url = `${window.location.origin}/#/s/${id}/${keyUrl}`;
       setShareUrl(url);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -98,24 +115,49 @@ export function CreatePage() {
   if (shareUrl) {
     return (
       <div className="card result">
-        <h2>Your encrypted link is ready</h2>
-        <p className="muted">
-          Share this link. The decryption key lives only in the part after
-          <code>#</code> and is never sent to the server.
+        <p className="eyebrow">
+          <span className="num">02</span>&nbsp;&nbsp;— Share
         </p>
-        <div className="share-row">
-          <input className="share-input" readOnly value={shareUrl} onFocus={(e) => e.target.select()} />
-          <button className="btn" onClick={copy}>
-            {copied ? "Copied!" : "Copy"}
-          </button>
-        </div>
-        <div className="actions">
-          <a className="btn ghost" href={shareUrl} target="_blank" rel="noreferrer">
-            Open link
-          </a>
-          <button className="btn ghost" onClick={() => { reset(); setFile(null); }}>
-            Create another
-          </button>
+        <h2>Your encrypted link is ready</h2>
+        <p className="muted small">
+          Send it any way you like — or let them scan the code. The 256-bit key
+          lives only after the <code>#</code> and never reaches the server.
+        </p>
+
+        <div className="share-block">
+          {qr && (
+            <div className="qr">
+              <img src={qr} alt="QR code for the encrypted link" />
+              <span className="eyebrow">Scan to open</span>
+            </div>
+          )}
+          <div className="share-controls">
+            <div className="share-row">
+              <input
+                className="share-input"
+                readOnly
+                value={shareUrl}
+                onFocus={(e) => e.target.select()}
+              />
+              <button className="btn" onClick={copy}>
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <div className="actions">
+              <a className="btn ghost" href={shareUrl} target="_blank" rel="noreferrer">
+                Open link
+              </a>
+              <button
+                className="btn ghost"
+                onClick={() => {
+                  reset();
+                  setFile(null);
+                }}
+              >
+                Create another
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
