@@ -17,6 +17,7 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 mod admin;
 mod common;
 mod db;
+mod rate;
 mod s3;
 mod secrets;
 mod uploads;
@@ -71,6 +72,17 @@ async fn main() {
     let pool = db::init_db(&db_path).await;
     tokio::spawn(db::cleanup_loop(pool.clone(), s3.clone()));
 
+    let create_limiter = rate::CreateLimiter::from_env();
+    if create_limiter.disabled() {
+        tracing::info!("create rate limit disabled (CREATE_RATE_LIMIT=0)");
+    } else {
+        tracing::info!(
+            max = create_limiter.max(),
+            window_secs = create_limiter.window_secs(),
+            "create rate limit enabled"
+        );
+    }
+
     let state = AppState {
         pool,
         db_path: db_path.clone(),
@@ -78,6 +90,7 @@ async fn main() {
         max_file_bytes: max_file_bytes as i64,
         max_ciphertext_chars,
         s3,
+        create_limiter,
     };
 
     let api = Router::new()
@@ -113,7 +126,10 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("listening on http://{addr}");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app)
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();

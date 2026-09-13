@@ -96,6 +96,7 @@ pub(crate) struct AppState {
     pub(crate) max_file_bytes: i64,
     pub(crate) max_ciphertext_chars: usize,
     pub(crate) s3: Option<S3Backend>,
+    pub(crate) create_limiter: crate::rate::CreateLimiter,
 }
 #[derive(Deserialize)]
 pub(crate) struct CreateReq {
