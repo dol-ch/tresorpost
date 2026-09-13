@@ -3,9 +3,12 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::{http::StatusCode, Json};
-use rand::Rng;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
+use subtle::ConstantTimeEq;
 
 use crate::s3::S3Backend;
 
@@ -20,6 +23,49 @@ pub(crate) fn generate_id() -> String {
     (0..ID_LEN)
         .map(|_| ID_ALPHABET[rng.gen_range(0..ID_ALPHABET.len())] as char)
         .collect()
+}
+
+/// 32-byte creator delete token (URL-safe, unpadded). Shown once at create time.
+pub(crate) fn generate_delete_token() -> String {
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    URL_SAFE_NO_PAD.encode(bytes)
+}
+
+pub(crate) fn hash_delete_token(token: &str) -> String {
+    let digest = Sha256::digest(token.as_bytes());
+    hex_encode(&digest)
+}
+
+/// Constant-time compare of a presented token against a stored SHA-256 hex hash.
+pub(crate) fn delete_token_matches(stored_hash: &str, presented: &str) -> bool {
+    if stored_hash.len() != 64 {
+        return false;
+    }
+    let got = hash_delete_token(presented);
+    bool::from(got.as_bytes().ct_eq(stored_hash.as_bytes()))
+}
+
+/// Constant-time equality for secret strings (admin token). Hashes first so
+/// length does not leak via early-exit byte compares.
+pub(crate) fn constant_time_eq_str(a: &str, b: &str) -> bool {
+    let ha = Sha256::digest(a.as_bytes());
+    let hb = Sha256::digest(b.as_bytes());
+    bool::from(ha.ct_eq(&hb))
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        out.push(HEX[(b >> 4) as usize] as char);
+        out.push(HEX[(b & 0x0f) as usize] as char);
+    }
+    out
+}
+
+fn default_allow_delete() -> bool {
+    true
 }
 
 /// Default maximum attachment size (MB) when `MAX_FILE_MB` is not set.
@@ -65,6 +111,10 @@ pub(crate) struct CreateReq {
     /// stats only. NOT the content — the payload itself stays encrypted.
     #[serde(default)]
     pub(crate) kind: Option<String>,
+    /// When true (the default), the response includes a one-time `delete_token`
+    /// the creator can use to destroy the secret. The server stores only a hash.
+    #[serde(default = "default_allow_delete")]
+    pub(crate) allow_delete: bool,
 }
 
 /// Normalize a client-provided kind to one of the known buckets.
@@ -93,6 +143,9 @@ pub(crate) async fn bump(pool: &SqlitePool, name: &str, delta: i64) {
 #[derive(Serialize)]
 pub(crate) struct CreateResp {
     pub(crate) id: String,
+    /// Present only when `allow_delete` was true. Keep private — not the share key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) delete_token: Option<String>,
 }
 
 #[derive(Serialize)]

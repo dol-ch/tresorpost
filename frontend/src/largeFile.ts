@@ -34,6 +34,7 @@ export const FALLBACK_MAX_BYTES = 500 * 1024 * 1024;
 export interface UploadResult {
   id: string;
   key: Uint8Array;
+  delete_token?: string;
 }
 
 export type ProgressFn = (done: number, total: number) => void;
@@ -96,10 +97,11 @@ export async function uploadLargeFile(opts: {
   kind: "file" | "image";
   expiresIn: number;
   maxViews: number | null;
+  allowDelete: boolean;
   onProgress: ProgressFn;
   signal?: AbortSignal;
 }): Promise<UploadResult> {
-  const { file, kind, expiresIn, maxViews, onProgress, signal } = opts;
+  const { file, kind, expiresIn, maxViews, allowDelete, onProgress, signal } = opts;
 
   const key = generateKey();
   const baseNonce = generateBaseNonce();
@@ -131,6 +133,7 @@ export async function uploadLargeFile(opts: {
     part_size: CHUNK_SIZE,
     part_count: chunkCount,
     meta: JSON.stringify(meta),
+    allow_delete: allowDelete,
   });
 
   const parts: CompletedPart[] = [];
@@ -162,7 +165,7 @@ export async function uploadLargeFile(opts: {
   }
 
   await uploadComplete(init.id, parts);
-  return { id: init.id, key };
+  return { id: init.id, key, delete_token: init.delete_token };
 }
 
 export function parseMeta(metaStr: string): StreamMeta {

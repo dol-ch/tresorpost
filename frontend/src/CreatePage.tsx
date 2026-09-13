@@ -44,6 +44,9 @@ export function CreatePage() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedDelete, setCopiedDelete] = useState(false);
+  const [allowDelete, setAllowDelete] = useState(true);
+  const [deleteUrl, setDeleteUrl] = useState<string | null>(null);
   const [maxFileBytes, setMaxFileBytes] = useState<number>(MAX_FILE_BYTES);
   const [s3Enabled, setS3Enabled] = useState(false);
   const [maxS3FileBytes, setMaxS3FileBytes] = useState<number>(0);
@@ -86,8 +89,10 @@ export function CreatePage() {
 
   function reset() {
     setShareUrl(null);
+    setDeleteUrl(null);
     setError(null);
     setCopied(false);
+    setCopiedDelete(false);
   }
 
   async function buildPayload(): Promise<SecretPayload> {
@@ -113,6 +118,7 @@ export function CreatePage() {
     try {
       let id: string;
       let key: Uint8Array;
+      let deleteToken: string | undefined;
 
       if (useS3) {
         if (!file) throw new Error("Choose a file first.");
@@ -127,29 +133,39 @@ export function CreatePage() {
           kind: "file",
           expiresIn,
           maxViews: maxViewsVal,
+          allowDelete,
           onProgress: (done, total) =>
             setProgress((p) => ({ done: Math.max(p?.done ?? 0, done), total })),
           signal: ac.signal,
         });
         id = res.id;
         key = res.key;
+        deleteToken = res.delete_token;
       } else {
         const payload = await buildPayload();
         key = generateKey();
         const plaintext = encodePayload(payload);
         const enc = encryptBytes(key, plaintext);
-        id = await createSecret({
+        const created = await createSecret({
           ciphertext: enc.ciphertext,
           nonce: enc.nonce,
           expires_in: expiresIn,
           max_views: maxViewsVal,
           kind: payload.kind,
+          allow_delete: allowDelete,
         });
+        id = created.id;
+        deleteToken = created.delete_token;
       }
 
       const keyUrl = bytesToBase64Url(key);
       const url = `${window.location.origin}/#/v/${id}/${keyUrl}`;
       setShareUrl(url);
+      setDeleteUrl(
+        deleteToken
+          ? `${window.location.origin}/#/d/${id}/${deleteToken}`
+          : null,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -175,6 +191,21 @@ export function CreatePage() {
     if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    }
+  }
+
+  async function copyDelete() {
+    if (!deleteUrl) return;
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(deleteUrl);
+      ok = true;
+    } catch {
+      ok = legacyCopy(deleteUrl);
+    }
+    if (ok) {
+      setCopiedDelete(true);
+      setTimeout(() => setCopiedDelete(false), 1500);
     }
   }
 
@@ -232,6 +263,29 @@ export function CreatePage() {
                 Create another
               </button>
             </div>
+            {deleteUrl && (
+              <div className="delete-keep">
+                <p className="eyebrow">Keep this to delete the note</p>
+                <p className="muted small">
+                  Do not send this with the share link. Anyone with it can destroy
+                  the note before it is opened.
+                </p>
+                <div className="share-row">
+                  <input
+                    className="share-input"
+                    readOnly
+                    value={deleteUrl}
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <button className="btn" onClick={copyDelete}>
+                    {copiedDelete ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <a className="btn ghost" href={deleteUrl}>
+                  Delete this note
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -302,6 +356,20 @@ export function CreatePage() {
             onChange={(e) => setMaxViews(Math.max(1, Number(e.target.value) || 1))}
           />
         )}
+      </div>
+
+      <div className="field">
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={allowDelete}
+            onChange={(e) => setAllowDelete(e.target.checked)}
+          />
+          Let me delete this note later
+        </label>
+        <p className="muted small">
+          You get a private delete link. It is not part of the share URL.
+        </p>
       </div>
 
       {error && <p className="error">{error}</p>}

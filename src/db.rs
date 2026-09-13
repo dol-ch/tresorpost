@@ -53,6 +53,50 @@ pub(crate) async fn purge_expired(pool: &SqlitePool, s3: &Option<S3Backend>, now
     }
 }
 
+/// Remove one secret and its S3 object/multipart (if any). Returns whether a
+/// row was deleted.
+pub(crate) async fn destroy_secret(pool: &SqlitePool, s3: &Option<S3Backend>, id: &str) -> bool {
+    let row = sqlx::query(
+        "SELECT storage, status, s3_key, upload_id FROM secrets WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten();
+
+    if let Some(row) = row {
+        let storage: String = row.get("storage");
+        if storage == "s3" {
+            if let Some(s3) = s3.as_ref() {
+                let key: Option<String> = row.get("s3_key");
+                let upload_id: Option<String> = row.get("upload_id");
+                let status: String = row.get("status");
+                if let Some(key) = key {
+                    if status == "pending" {
+                        if let Some(uid) = upload_id {
+                            s3.abort_multipart(&key, &uid).await;
+                        }
+                    }
+                    s3.delete(&key).await;
+                }
+            }
+        }
+    }
+
+    match sqlx::query("DELETE FROM secrets WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await
+    {
+        Ok(res) => res.rows_affected() > 0,
+        Err(e) => {
+            tracing::error!("destroy failed: {e}");
+            false
+        }
+    }
+}
+
 /// Periodically purge expired rows so the database does not grow unbounded.
 pub(crate) async fn cleanup_loop(pool: SqlitePool, s3: Option<S3Backend>) {
     let mut ticker = tokio::time::interval(Duration::from_secs(60));
@@ -130,6 +174,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
         "ALTER TABLE secrets ADD COLUMN s3_key TEXT",
         "ALTER TABLE secrets ADD COLUMN upload_id TEXT",
         "ALTER TABLE secrets ADD COLUMN meta TEXT",
+        "ALTER TABLE secrets ADD COLUMN delete_token_hash TEXT",
     ] {
         sqlx::query(stmt).execute(&pool).await.ok();
     }

@@ -12,7 +12,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use tower_http::{cors::CorsLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{services::ServeDir, trace::TraceLayer};
 
 mod admin;
 mod common;
@@ -84,7 +84,7 @@ async fn main() {
         .route("/health", get(secrets::health))
         .route("/config", get(secrets::config))
         .route("/secrets", post(secrets::create_secret))
-        .route("/secrets/{id}", get(secrets::read_secret))
+        .route("/secrets/{id}", get(secrets::read_secret).delete(secrets::delete_secret))
         .route("/uploads/init", post(uploads::upload_init))
         .route("/uploads/{id}/part-url", post(uploads::upload_part_url))
         .route("/uploads/{id}/complete", post(uploads::upload_complete))
@@ -107,7 +107,6 @@ async fn main() {
     }
 
     let app = app
-        .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 

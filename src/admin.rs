@@ -26,7 +26,7 @@ pub(crate) fn check_admin(
         .get("x-admin-token")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    if provided != expected {
+    if provided.is_empty() || !constant_time_eq_str(provided, expected) {
         return Err(err(StatusCode::UNAUTHORIZED, "invalid admin token"));
     }
     Ok(())
