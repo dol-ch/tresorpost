@@ -115,7 +115,7 @@ export function App() {
                   Cipher <b>XChaCha20-Poly1305</b>
                 </span>
                 <span>
-                  Key <b>256-bit</b>
+                  Key <b>256-bit · quantum-safe</b>
                 </span>
                 <span>
                   Server <b>zero-knowledge</b>

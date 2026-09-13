@@ -90,7 +90,7 @@ import lockup from "./assets/logos/dol-lockup-white.svg";
 
 export const brand: Brand = {
   name: "DOL",
-  tagline: "Encrypted · Self-destructing",
+  tagline: "Encrypted · Quantum-safe · Self-destructing",
   Wordmark: () => <img src={lockup} alt="DOL" />,
   footerLinks: [
     { label: "dol.ch", href: "https://dol.ch" },
