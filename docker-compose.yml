@@ -1,0 +1,19 @@
+services:
+  tresorpost:
+    image: ghcr.io/dol-ch/tresorpost:latest
+    # To build the image locally instead of pulling from GHCR, comment out
+    # `image:` above and uncomment the next line:
+    # build: .
+    ports:
+      - "7777:3000" # host 7777 -> app (frontend + API served together)
+    environment:
+      MAX_FILE_MB: "5"
+      # ADMIN_TOKEN: "change-me"   # set to enable the admin dashboard at /#/admin
+      DATABASE_PATH: /data/tresorpost.db
+      RUST_LOG: "info"
+    volumes:
+      - tresorpost-data:/data
+    restart: unless-stopped
+
+volumes:
+  tresorpost-data:
