@@ -20,6 +20,9 @@ export async function createSecret(input: CreateSecretInput): Promise<CreateSecr
   });
   if (!res.ok) {
     const msg = await res.json().catch(() => ({ error: res.statusText }));
+    if (res.status === 429) {
+      throw new Error(msg.error || "Too many notes created. Please wait and try again.");
+    }
     throw new Error(msg.error || `request failed (${res.status})`);
   }
   return (await res.json()) as CreateSecretResult;
@@ -104,6 +107,9 @@ export async function uploadInit(input: UploadInitInput): Promise<UploadInitResu
   });
   if (!res.ok) {
     const msg = await res.json().catch(() => ({ error: res.statusText }));
+    if (res.status === 429) {
+      throw new Error(msg.error || "Too many notes created. Please wait and try again.");
+    }
     throw new Error(msg.error || `request failed (${res.status})`);
   }
   return (await res.json()) as UploadInitResult;

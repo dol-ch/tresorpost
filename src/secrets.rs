@@ -1,8 +1,10 @@
 //! SQLite secret create/read and public config/health endpoints.
 
+use std::net::SocketAddr;
+
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
+    extract::{ConnectInfo, Path, State},
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     Json,
 };
@@ -39,8 +41,11 @@ pub(crate) async fn config(State(state): State<AppState>) -> Json<ConfigResp> {
 
 pub(crate) async fn create_secret(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(req): Json<CreateReq>,
 ) -> Result<(StatusCode, Json<CreateResp>), (StatusCode, Json<ApiError>)> {
+    crate::rate::enforce_create_limit(&state, &headers, ConnectInfo(peer))?;
     if req.ciphertext.is_empty() || req.nonce.is_empty() {
         return Err(err(StatusCode::BAD_REQUEST, "empty payload"));
     }

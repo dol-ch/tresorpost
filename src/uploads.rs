@@ -1,8 +1,10 @@
 //! S3 multipart upload orchestration (presign, complete, abort).
 
+use std::net::SocketAddr;
+
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
+    extract::{ConnectInfo, Path, State},
+    http::{HeaderMap, StatusCode},
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -45,8 +47,11 @@ pub(crate) struct UploadInitResp {
 
 pub(crate) async fn upload_init(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(req): Json<UploadInitReq>,
 ) -> Result<(StatusCode, Json<UploadInitResp>), (StatusCode, Json<ApiError>)> {
+    crate::rate::enforce_create_limit(&state, &headers, ConnectInfo(peer))?;
     let Some(s3) = state.s3.clone() else {
         return Err(err(StatusCode::SERVICE_UNAVAILABLE, "s3 not configured"));
     };
