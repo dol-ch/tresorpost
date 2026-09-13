@@ -1,4 +1,4 @@
-# Tresorpost — end-to-end encrypted, quantum-safe
+# Tresorpost — end-to-end encrypted, burn-after-reading
 
 _Tresorpost_ (German: "vault mail") — send encrypted text, images and files.
 
@@ -17,9 +17,13 @@ branding (logos, fonts) lives in a swappable theme layer; see
 - **Zero-knowledge server.** Encryption/decryption happen entirely client-side.
   The 256-bit key is generated in the browser and placed in the URL *fragment*
   (`#…`), which browsers never send to the server.
-- **Quantum-resistant cipher.** Payloads are sealed with **XChaCha20-Poly1305**
-  using a 256-bit key. Symmetric ciphers at 256 bits retain ~128-bit security
-  even against Grover's algorithm, so they are considered quantum-safe.
+- **256-bit XChaCha20-Poly1305.** Payloads are sealed in the browser with a
+  random 256-bit key. That is the right primitive for a *shared-secret link*
+  (the key lives in the URL fragment). A cryptographically relevant quantum
+  computer running Grover's algorithm would still face ~128-bit work — not
+  practical. NIST post-quantum KEMs (ML-KEM / Kyber) are for *public-key*
+  key agreement, which this app does not use, so the cipher does not need to
+  change.
 - **Three content types** via a dropdown: **Text** (ProseMirror rich text, no
   attachments), **Image**, and **File**.
 - **Self-destruct timer:** 1, 5, 15, 30 minutes · 1, 3, 6, 12 hours · 1, 3, 7
@@ -34,6 +38,9 @@ branding (logos, fonts) lives in a swappable theme layer; see
   on decrypted text.
 - **Admin dashboard** at `#/admin` (token-protected): creations chart, active
   links, purge expired.
+- **Per-IP create rate limit** (default 60 notes / hour; `CREATE_RATE_LIMIT` /
+  `CREATE_RATE_WINDOW_SECS`). Applies to `POST /api/secrets` and
+  `POST /api/uploads/init`. `429` when exceeded.
 - **Durable links** backed by SQLite. Optional **S3** path for large files
   (up to ~5 GB).
 
@@ -47,7 +54,7 @@ branding (logos, fonts) lives in a swappable theme layer; see
 
 The server exposes a tiny API and, in production, serves the built SPA:
 
-- `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete }`, returns `{ id, delete_token? }`.
+- `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete }`, returns `{ id, delete_token? }`. `429` if the per-IP create limit is exceeded.
 - `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted.
 - `DELETE /api/secrets/{id}` — creator destroy with `{ delete_token }`. Same `404` for unknown id or wrong token.
 - `GET  /api/config` — `{ max_file_bytes, s3_enabled, max_s3_file_bytes }`.
@@ -144,7 +151,9 @@ present — copy `.env.example` to `.env`):
 | Variable                | Default        | Purpose                                                        |
 | ----------------------- | -------------- | -------------------------------------------------------------- |
 | `MAX_FILE_MB`           | `5`            | Max attachment size (MB) for the SQLite (small-file) path.     |
-| `ADMIN_TOKEN`           | _(unset)_      | Enables the admin dashboard; disabled when unset.              |
+| `CREATE_RATE_LIMIT`     | `60`           | Max creates per IP per window. `0` disables.                   |
+| `CREATE_RATE_WINDOW_SECS` | `3600`       | Rate-limit window in seconds.                                  |
+| `TRUST_PROXY`           | `false`        | Honour `X-Forwarded-For` / `X-Real-IP` (only behind a proxy).  |
 | `PORT`                  | `3000`         | HTTP port.                                                     |
 | `DATABASE_PATH`         | `db/data.db`   | SQLite database file path.                                     |
 | `STATIC_DIR`            | `frontend/dist`| Built frontend directory to serve.                             |
