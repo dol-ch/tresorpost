@@ -4,9 +4,15 @@ export interface CreateSecretInput extends Encrypted {
   expires_in: number; // seconds
   max_views: number | null;
   kind: "text" | "image" | "file"; // coarse metadata for aggregate stats
+  allow_delete: boolean;
 }
 
-export async function createSecret(input: CreateSecretInput): Promise<string> {
+export interface CreateSecretResult {
+  id: string;
+  delete_token?: string;
+}
+
+export async function createSecret(input: CreateSecretInput): Promise<CreateSecretResult> {
   const res = await fetch("/api/secrets", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -16,8 +22,19 @@ export async function createSecret(input: CreateSecretInput): Promise<string> {
     const msg = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(msg.error || `request failed (${res.status})`);
   }
-  const data = (await res.json()) as { id: string };
-  return data.id;
+  return (await res.json()) as CreateSecretResult;
+}
+
+export async function deleteSecret(id: string, deleteToken: string): Promise<void> {
+  const res = await fetch(`/api/secrets/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ delete_token: deleteToken }),
+  });
+  if (res.status === 204) return;
+  if (res.status === 404) throw new Error("This note is already gone, or the delete link is invalid.");
+  const msg = await res.json().catch(() => ({ error: res.statusText }));
+  throw new Error(msg.error || `request failed (${res.status})`);
 }
 
 export interface FetchedSecret {
@@ -69,12 +86,14 @@ export interface UploadInitInput {
   part_size: number;
   part_count: number;
   meta: string; // opaque stream descriptor
+  allow_delete: boolean;
 }
 
 export interface UploadInitResult {
   id: string;
   upload_id: string;
   part_size: number;
+  delete_token?: string;
 }
 
 export async function uploadInit(input: UploadInitInput): Promise<UploadInitResult> {

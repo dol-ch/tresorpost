@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { CreatePage } from "./CreatePage";
 import { ViewPage } from "./ViewPage";
+import { DeletePage } from "./DeletePage";
 import { AdminPage } from "./AdminPage";
 import { brand } from "./brand";
 
 type Route =
   | { name: "create" }
   | { name: "view"; id: string; key: string }
+  | { name: "delete"; id: string; token: string }
   | { name: "admin" };
 
 function parseRoute(): Route {
@@ -15,6 +17,9 @@ function parseRoute(): Route {
   const parts = hash.split("/").filter(Boolean);
   if (parts[0] === "admin") {
     return { name: "admin" };
+  }
+  if (parts[0] === "d" && parts[1] && parts[2]) {
+    return { name: "delete", id: parts[1], token: parts.slice(2).join("/") };
   }
   if ((parts[0] === "s" || parts[0] === "v") && parts[1] && parts[2]) {
     return { name: "view", id: parts[1], key: parts.slice(2).join("/") };
@@ -117,6 +122,7 @@ export function App() {
           </>
         )}
         {route.name === "view" && <ViewPage id={route.id} keyB64Url={route.key} />}
+        {route.name === "delete" && <DeletePage id={route.id} token={route.token} />}
         {route.name === "admin" && <AdminPage />}
       </main>
 
