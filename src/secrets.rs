@@ -65,6 +65,7 @@ pub(crate) async fn create_secret(
     let expires_at = now + req.expires_in;
     let kind = normalize_kind(&req.kind);
     let size = (req.ciphertext.len() + req.nonce.len()) as i64;
+    crate::db::enforce_sqlite_quota(&state.db_path, state.max_sqlite_bytes, size as u64)?;
     let delete_token = req.allow_delete.then(generate_delete_token);
     let delete_hash = delete_token.as_deref().map(hash_delete_token);
     let recipient_delete_token = req.allow_recipient_delete.then(generate_delete_token);
@@ -186,19 +187,16 @@ pub(crate) async fn read_secret(
             err(StatusCode::INTERNAL_SERVER_ERROR, "storage error")
         })?;
 
-        // Burn: this was the final allowed view. The view-count guard already
-        // makes every later GET a 404, so we don't need the row anymore — but we
-        // keep it so the expiry sweeper can still delete the object if the
-        // process restarts. We schedule the object deletion after the presigned
-        // URL's lifetime, giving this in-flight download time to finish.
+        // Burn: later GETs already 404 via the view-count guard. Keep the row
+        // and set purge_after so the sweeper deletes the object after the
+        // presigned URL expires — survives process restart, unlike spawn+sleep.
         if burning {
-            let s3c = s3.clone();
-            let grace = s3.url_ttl;
-            let key_owned = key.clone();
-            tokio::spawn(async move {
-                tokio::time::sleep(grace).await;
-                s3c.delete(&key_owned).await;
-            });
+            let purge_after = now.saturating_add(s3.url_ttl.as_secs() as i64);
+            let _ = sqlx::query("UPDATE secrets SET purge_after = ? WHERE id = ?")
+                .bind(purge_after)
+                .bind(&id)
+                .execute(&state.pool)
+                .await;
             bump(&state.pool, "burned_total", 1).await;
         }
 
@@ -279,8 +277,15 @@ pub(crate) async fn delete_secret(
         return Err(err(StatusCode::NOT_FOUND, "not found"));
     }
 
-    if crate::db::destroy_secret(&state.pool, &state.s3, &id).await {
-        bump(&state.pool, "deleted_total", 1).await;
+    match crate::db::destroy_secret(&state.pool, &state.s3, &id).await {
+        crate::db::DestroyOutcome::Deleted => {
+            bump(&state.pool, "deleted_total", 1).await;
+            Ok(StatusCode::NO_CONTENT)
+        }
+        crate::db::DestroyOutcome::Missing => Ok(StatusCode::NO_CONTENT),
+        crate::db::DestroyOutcome::RetryLater => Err(err(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "could not delete storage, retry",
+        )),
     }
-    Ok(StatusCode::NO_CONTENT)
 }

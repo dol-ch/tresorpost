@@ -11,7 +11,7 @@ use serde::Serialize;
 use sqlx::Row;
 
 use crate::common::*;
-use crate::db::purge_expired;
+use crate::db::{db_file_bytes, purge_expired};
 
 /// Validate the `x-admin-token` header against the configured token. Returns an
 /// error response when admin is disabled or the token is wrong.
@@ -69,15 +69,6 @@ pub(crate) struct LifetimeStats {
 pub(crate) struct StorageStats {
     db_file_bytes: u64,
     active_bytes: i64,
-}
-
-/// Sum the sizes of the SQLite database file and its WAL/SHM sidecars.
-pub(crate) fn db_file_bytes(db_path: &str) -> u64 {
-    ["", "-wal", "-shm"]
-        .iter()
-        .filter_map(|suffix| std::fs::metadata(format!("{db_path}{suffix}")).ok())
-        .map(|m| m.len())
-        .sum()
 }
 
 /// Protected admin dashboard stats. Requires the `x-admin-token` header to match
@@ -186,7 +177,13 @@ pub(crate) async fn admin_purge(
 ) -> Result<Json<PurgeResp>, (StatusCode, Json<ApiError>)> {
     check_admin(&state, &headers)?;
     let now = now_secs();
-    let purged = purge_expired(&state.pool, &state.s3, now).await;
+    let purged = purge_expired(
+        &state.pool,
+        &state.s3,
+        now,
+        state.pending_upload_ttl_secs,
+    )
+    .await;
     if purged > 0 {
         bump(&state.pool, "expired_total", purged as i64).await;
     }

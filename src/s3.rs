@@ -13,6 +13,7 @@
 use std::time::Duration;
 
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
+use aws_sdk_s3::error::ProvideErrorMetadata;
 use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::Client;
@@ -173,9 +174,30 @@ impl S3Backend {
         Ok(())
     }
 
-    /// Abort a multipart upload (best-effort cleanup of orphaned parts).
-    pub async fn abort_multipart(&self, key: &str, upload_id: &str) {
-        let _ = self
+    /// Delete an object. `true` if gone (including already missing).
+    pub async fn delete_object(&self, key: &str) -> bool {
+        match self
+            .client
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+        {
+            Ok(_) => true,
+            Err(e) => {
+                if is_missing(&e) {
+                    return true;
+                }
+                tracing::warn!("delete_object failed for {key}: {e}");
+                false
+            }
+        }
+    }
+
+    /// Abort a multipart upload. `true` if aborted or already gone.
+    pub async fn abort_multipart(&self, key: &str, upload_id: &str) -> bool {
+        match self
             .client
             .abort_multipart_upload()
             .bucket(&self.bucket)
@@ -183,7 +205,16 @@ impl S3Backend {
             .upload_id(upload_id)
             .send()
             .await
-            .map_err(|e| tracing::warn!("abort_multipart_upload failed: {e}"));
+        {
+            Ok(_) => true,
+            Err(e) => {
+                if is_missing(&e) {
+                    return true;
+                }
+                tracing::warn!("abort_multipart_upload failed: {e}");
+                false
+            }
+        }
     }
 
     /// Presign a short-lived GET URL for download.
@@ -200,15 +231,44 @@ impl S3Backend {
         Ok(presigned.uri().to_string())
     }
 
-    /// Delete an object (best-effort; used on burn/expiry).
-    pub async fn delete(&self, key: &str) {
-        let _ = self
-            .client
-            .delete_object()
-            .bucket(&self.bucket)
-            .key(key)
-            .send()
-            .await
-            .map_err(|e| tracing::warn!("delete_object failed for {key}: {e}"));
+    /// List object keys under `tresorpost/` (for orphan reaping).
+    pub async fn list_object_keys(&self) -> Result<Vec<String>, String> {
+        let mut keys = Vec::new();
+        let mut token: Option<String> = None;
+        loop {
+            let mut req = self
+                .client
+                .list_objects_v2()
+                .bucket(&self.bucket)
+                .prefix("tresorpost/");
+            if let Some(t) = token.as_ref() {
+                req = req.continuation_token(t);
+            }
+            let out = req
+                .send()
+                .await
+                .map_err(|e| format!("list_objects_v2: {e}"))?;
+            for obj in out.contents() {
+                if let Some(k) = obj.key() {
+                    keys.push(k.to_string());
+                }
+            }
+            if out.is_truncated() == Some(true) {
+                token = out.next_continuation_token().map(|s| s.to_string());
+                if token.is_none() {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        Ok(keys)
     }
+}
+
+fn is_missing(e: &impl ProvideErrorMetadata) -> bool {
+    matches!(
+        e.code(),
+        Some("NoSuchKey" | "NoSuchUpload" | "NotFound" | "404")
+    )
 }
