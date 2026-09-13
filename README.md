@@ -57,12 +57,14 @@ branding (logos, fonts) lives in a swappable theme layer; see
 
 The server exposes a tiny API and, in production, serves the built SPA:
 
-- `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete, allow_recipient_delete }`, returns `{ id, delete_token?, recipient_delete_token? }`. `429` if the per-IP create limit is exceeded.
+- `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete, allow_recipient_delete }`, returns `{ id, delete_token?, recipient_delete_token? }`. `429` if the per-IP create limit is exceeded. `507` if the SQLite file would exceed `MAX_SQLITE_MB`.
+- `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted.
+- `DELETE /api/secrets/{id}` — destroy with `{ delete_token }` (creator **or** recipient token). Same `404` for unknown id or wrong token. `503` if the S3 object could not be deleted (row is kept so a retry can finish).
 - `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted.
 - `DELETE /api/secrets/{id}` — destroy with `{ delete_token }` (creator **or** recipient token). Same `404` for unknown id or wrong token.
 - `GET  /api/config` — `{ max_file_bytes, s3_enabled, max_s3_file_bytes }`.
 - `GET  /api/health` — liveness.
-- `POST /api/uploads/init` — begin an S3 multipart upload (large files).
+- `POST /api/uploads/init` — begin an S3 multipart upload (large files). `429` if the create rate limit is exceeded; `507` if `MAX_S3_GB` (or SQLite cap) would be exceeded.
 - `POST /api/uploads/{id}/part-url` — presigned PUT URL for one encrypted chunk.
 - `POST /api/uploads/{id}/complete` — finish the multipart upload.
 - `GET  /api/admin/stats` · `GET /api/admin/active` · `POST /api/admin/purge` — admin (requires `ADMIN_TOKEN`).
@@ -86,9 +88,16 @@ chunk is sealed independently. Uploads and downloads never buffer the whole
 file. Downloads stream to disk via the File System Access API (with a
 size-capped in-memory Blob fallback).
 
-Objects are deleted on expiry (background sweep + admin “purge expired”). When
-a link is burned it returns `404` immediately; the object is removed after the
-presigned-URL grace window (`S3_URL_TTL_SECS`).
+Objects are deleted on expiry, burn (after the presigned-URL grace window),
+explicit delete, and by an orphan reaper that lists `tresorpost/` keys not
+referenced by SQLite. The sweeper **does not drop a SQLite row until the S3
+object or multipart upload is gone**, then checkpoints the WAL and runs
+incremental vacuum so the database file can shrink.
+
+Abandoned multipart uploads are reaped after `PENDING_UPLOAD_TTL_SECS`
+(default 6 hours), not the secret's full TTL (up to 31 days). Last-view S3
+burns set `purge_after = now + S3_URL_TTL_SECS` on the row instead of a
+fire-and-forget task, so a restart still deletes the object.
 
 ### Bucket CORS (required for browser → S3)
 
@@ -116,6 +125,31 @@ to **expose the `ETag` header**. Example CORS:
 
 Set at least `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and
 `S3_SECRET_ACCESS_KEY`. Leave them unset to keep the SQLite-only path.
+
+### Bucket lifecycle (recommended)
+
+As belt-and-suspenders against orphaned objects and incomplete multipart
+uploads, configure an S3 lifecycle rule on prefix `tresorpost/`:
+
+- Expire objects after a period longer than the maximum secret TTL (31 days)
+  plus the presigned-URL grace window (for example 40 days).
+- Abort incomplete multipart uploads after 1 day.
+
+Example (AWS CLI JSON):
+
+```json
+{
+  "Rules": [
+    {
+      "ID": "tresorpost-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "tresorpost/" },
+      "Expiration": { "Days": 40 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 1 }
+    }
+  ]
+}
+```
 
 ## Local development
 
@@ -168,6 +202,9 @@ present — copy `.env.example` to `.env`):
 | `S3_FORCE_PATH_STYLE`   | `false`        | Use path-style addressing (set `true` for MinIO).              |
 | `MAX_S3_FILE_MB`        | `5120`         | Max raw file size (MB) for the S3 large-file path (~5 GB).     |
 | `S3_URL_TTL_SECS`       | `3600`         | Lifetime of presigned upload/download URLs and the burn grace. |
+| `MAX_SQLITE_MB`         | `2048`         | Max on-disk SQLite size (MB, including WAL/SHM). `0` = unlimited. Creates return `507` when exceeded. |
+| `MAX_S3_GB`             | `50`           | Max live S3 usage (GB): `SUM(size)` of rows with `s3_key`, including pending. `0` = unlimited. `uploads/init` returns `507` when exceeded. |
+| `PENDING_UPLOAD_TTL_SECS` | `21600`      | Max age of an abandoned multipart upload (default 6 hours). |
 
 `MAX_FILE_MB` is the single source of truth: the server derives its request-body
 and ciphertext limits from it and exposes the value at `GET /api/config`, which

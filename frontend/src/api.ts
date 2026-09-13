@@ -25,6 +25,9 @@ export async function createSecret(input: CreateSecretInput): Promise<CreateSecr
     if (res.status === 429) {
       throw new Error(msg.error || "Too many notes created. Please wait and try again.");
     }
+    if (res.status === 507) {
+      throw new Error(msg.error || "Storage is full. Please try again later.");
+    }
     throw new Error(msg.error || `request failed (${res.status})`);
   }
   return (await res.json()) as CreateSecretResult;
@@ -38,6 +41,7 @@ export async function deleteSecret(id: string, deleteToken: string): Promise<voi
   });
   if (res.status === 204) return;
   if (res.status === 404) throw new Error("This note is already gone, or the delete link is invalid.");
+  if (res.status === 503) throw new Error("Could not delete stored files. Please retry.");
   const msg = await res.json().catch(() => ({ error: res.statusText }));
   throw new Error(msg.error || `request failed (${res.status})`);
 }
@@ -113,6 +117,9 @@ export async function uploadInit(input: UploadInitInput): Promise<UploadInitResu
     const msg = await res.json().catch(() => ({ error: res.statusText }));
     if (res.status === 429) {
       throw new Error(msg.error || "Too many notes created. Please wait and try again.");
+    }
+    if (res.status === 507) {
+      throw new Error(msg.error || "Storage is full. Please try again later.");
     }
     throw new Error(msg.error || `request failed (${res.status})`);
   }

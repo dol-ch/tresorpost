@@ -76,6 +76,12 @@ fn default_allow_recipient_delete() -> bool {
 pub(crate) const DEFAULT_MAX_FILE_MB: u64 = 5;
 /// Default maximum S3-backed file size (MB) when `MAX_S3_FILE_MB` is not set.
 pub(crate) const DEFAULT_MAX_S3_FILE_MB: u64 = 5120; // ~5 GB
+/// Default SQLite database size cap (MB). `MAX_SQLITE_MB=0` disables the cap.
+pub(crate) const DEFAULT_MAX_SQLITE_MB: u64 = 2048;
+/// Default live S3 usage cap (GB). `MAX_S3_GB=0` disables the cap.
+pub(crate) const DEFAULT_MAX_S3_GB: u64 = 50;
+/// Abandoned multipart uploads are reaped after this many seconds.
+pub(crate) const DEFAULT_PENDING_UPLOAD_TTL_SECS: i64 = 6 * 3600;
 /// Smallest allowed lifetime (seconds). UI minimum is 1 minute.
 pub(crate) const MIN_EXPIRES: i64 = 60;
 /// Largest allowed lifetime (seconds). UI maximum is ~1 month (31 days).
@@ -101,6 +107,11 @@ pub(crate) struct AppState {
     pub(crate) max_ciphertext_chars: usize,
     pub(crate) s3: Option<S3Backend>,
     pub(crate) create_limiter: crate::rate::CreateLimiter,
+    /// 0 = unlimited.
+    pub(crate) max_sqlite_bytes: u64,
+    /// 0 = unlimited. Compared to SUM(size) of rows that have an s3_key.
+    pub(crate) max_s3_bytes: u64,
+    pub(crate) pending_upload_ttl_secs: i64,
 }
 #[derive(Deserialize)]
 pub(crate) struct CreateReq {
