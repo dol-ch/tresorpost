@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/dist
+target
+*.db
+*.db-shm
+*.db-wal
+.env
+**/*.log
+# NOTE: frontend/src/brand/private/ is intentionally NOT ignored so a private
+# branded build (fonts/logos) is included when building from a branded source.
