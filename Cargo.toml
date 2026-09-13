@@ -30,3 +30,8 @@ aws-credential-types = "1"
 
 [profile.release]
 opt-level = 2
+
+# Cargo strips proc-macro dylibs in release; macOS 26/27 dyld
+# then rejects misaligned LINKEDIT (sqlx_macros dlopen fails).
+[profile.release.build-override]
+strip = false
