@@ -25,6 +25,9 @@ branding (logos, fonts) lives in a swappable theme layer; see
 - **Self-destruct timer:** 1, 5, 15, 30 minutes · 1, 3, 6, 12 hours · 1, 3, 7
   days · 1 month. The view page shows remaining opens and expiry.
 - **Optional open limit:** burn the secret after _N_ opens (numeric input, 1…∞).
+- **Creator delete link:** optional private `#/d/<id>/<token>` URL so you can
+  destroy a note before anyone opens it. The server stores only a SHA-256 hash
+  of the token.
 - **Short share links + QR code.** Compact `#/v/<id>/<key>` links (12-char IDs)
   with a scannable QR on the result screen. Legacy `#/s/…` links still open.
 - **Light/dark theme**, syntax highlighting, and copy-all / per-code-block copy
@@ -44,8 +47,9 @@ branding (logos, fonts) lives in a swappable theme layer; see
 
 The server exposes a tiny API and, in production, serves the built SPA:
 
-- `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind }`, returns `{ id }`.
+- `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete }`, returns `{ id, delete_token? }`.
 - `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted.
+- `DELETE /api/secrets/{id}` — creator destroy with `{ delete_token }`. Same `404` for unknown id or wrong token.
 - `GET  /api/config` — `{ max_file_bytes, s3_enabled, max_s3_file_bytes }`.
 - `GET  /api/health` — liveness.
 - `POST /api/uploads/init` — begin an S3 multipart upload (large files).
