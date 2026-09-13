@@ -1,0 +1,3 @@
+/* Declare theme layer order once, up front. A private override theme always
+   wins over the base theme regardless of import/bundle order. */
+@layer theme.base, theme.override;
