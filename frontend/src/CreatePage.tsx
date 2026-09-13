@@ -234,8 +234,9 @@ export function CreatePage() {
         </p>
         <h2>Your encrypted link is ready</h2>
         <p className="muted small">
-          Send it any way you like — or let them scan the code. The 256-bit key
-          lives only after the <code>#</code> and never reaches the server.
+          Send it any way you like — or let them scan the code. The quantum-safe
+          256-bit key lives only after the <code>#</code> and never reaches the
+          server.
         </p>
 
         <div className="share-block">

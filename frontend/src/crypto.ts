@@ -1,9 +1,9 @@
 // Client-side end-to-end encryption.
 //
 // We use XChaCha20-Poly1305 with a 256-bit key. Symmetric ciphers with 256-bit
-// keys are considered quantum-resistant: the best known quantum attack (Grover's
-// algorithm) only halves the effective key strength, leaving ~128 bits of
-// security — comfortably beyond reach. The key is generated in the browser and
+// keys are considered quantum-safe / quantum-resistant: the best known quantum
+// attack (Grover's algorithm) only halves the effective key strength, leaving
+// ~128 bits of security — comfortably beyond reach. The key is generated in the browser and
 // never sent to the server; it is placed in the URL fragment (after `#`), which
 // browsers do not transmit in HTTP requests. The server therefore only ever
 // stores opaque ciphertext and can never decrypt it.

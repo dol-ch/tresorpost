@@ -13,7 +13,7 @@ function Wordmark() {
 
 export const brand: Brand = {
     name: "Tresorpost",
-    tagline: "Encrypted · Self-destructing",
+    tagline: "Encrypted · Quantum-safe · Self-destructing",
     Wordmark,
     footerLinks: [
         {

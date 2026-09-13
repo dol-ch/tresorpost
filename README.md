@@ -1,4 +1,4 @@
-# Tresorpost — end-to-end encrypted, burn-after-reading
+# Tresorpost — end-to-end encrypted, quantum-safe
 
 _Tresorpost_ (German: "vault mail") — send encrypted text, images and files.
 
@@ -17,13 +17,9 @@ branding (logos, fonts) lives in a swappable theme layer; see
 - **Zero-knowledge server.** Encryption/decryption happen entirely client-side.
   The 256-bit key is generated in the browser and placed in the URL *fragment*
   (`#…`), which browsers never send to the server.
-- **256-bit XChaCha20-Poly1305.** Payloads are sealed in the browser with a
-  random 256-bit key. That is the right primitive for a *shared-secret link*
-  (the key lives in the URL fragment). A cryptographically relevant quantum
-  computer running Grover's algorithm would still face ~128-bit work — not
-  practical. NIST post-quantum KEMs (ML-KEM / Kyber) are for *public-key*
-  key agreement, which this app does not use, so the cipher does not need to
-  change.
+- **Quantum-resistant cipher.** Payloads are sealed with **XChaCha20-Poly1305**
+  using a 256-bit key. Symmetric ciphers at 256 bits retain ~128-bit security
+  even against Grover's algorithm, so they are considered quantum-safe.
 - **Three content types** via a dropdown: **Text** (ProseMirror rich text, no
   attachments), **Image**, and **File**.
 - **Self-destruct timer:** 1, 5, 15, 30 minutes · 1, 3, 6, 12 hours · 1, 3, 7
@@ -53,7 +49,7 @@ branding (logos, fonts) lives in a swappable theme layer; see
 | ---------- | --------------------------------------------------------------- |
 | Backend    | Rust · [Axum](https://github.com/tokio-rs/axum) · SQLite (sqlx) |
 | Frontend   | Vite · React · TypeScript · ProseMirror · @noble/ciphers        |
-| Crypto     | XChaCha20-Poly1305 (256-bit), key in URL fragment               |
+| Crypto     | XChaCha20-Poly1305 (256-bit, quantum-safe), key in URL fragment |
 
 The server exposes a tiny API and, in production, serves the built SPA:
 
