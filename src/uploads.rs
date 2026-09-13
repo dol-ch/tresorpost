@@ -77,8 +77,20 @@ pub(crate) async fn upload_init(
         return Err(err(StatusCode::BAD_REQUEST, "invalid meta"));
     }
 
+    crate::db::enforce_sqlite_quota(&state.db_path, state.max_sqlite_bytes, 0)?;
+    crate::db::enforce_s3_quota(&state.pool, state.max_s3_bytes, req.total_size).await?;
+
     let now = now_secs();
-    let expires_at = now + req.expires_in;
+    let secret_expires_at = now + req.expires_in;
+    // Cap pending-row expiry so abandoned multipart cannot sit for 31 days.
+    // The intended secret TTL is restored on complete from `nonce` (unused on
+    // the S3 path while status is pending).
+    let expires_at = crate::db::pending_expires_at(
+        now,
+        req.expires_in,
+        state.pending_upload_ttl_secs,
+    );
+    let pending_purge_after = expires_at;
     let kind = normalize_kind(&req.kind);
     let s3_key = S3Backend::random_key();
     let delete_token = req.allow_delete.then(generate_delete_token);
@@ -96,10 +108,11 @@ pub(crate) async fn upload_init(
         let res = sqlx::query(
             "INSERT INTO secrets \
              (id, ciphertext, nonce, created_at, expires_at, max_views, views, kind, size, \
-              storage, status, s3_key, upload_id, meta, delete_token_hash, recipient_delete_hash) \
-             VALUES (?, '', '', ?, ?, ?, 0, ?, ?, 's3', 'pending', ?, ?, ?, ?, ?)",
+              storage, status, s3_key, upload_id, meta, delete_token_hash, recipient_delete_hash, purge_after) \
+             VALUES (?, '', ?, ?, ?, ?, 0, ?, ?, 's3', 'pending', ?, ?, ?, ?, ?, ?)",
         )
         .bind(&id)
+        .bind(secret_expires_at.to_string())
         .bind(now)
         .bind(expires_at)
         .bind(req.max_views)
@@ -110,6 +123,7 @@ pub(crate) async fn upload_init(
         .bind(&req.meta)
         .bind(&delete_hash)
         .bind(&recipient_delete_hash)
+        .bind(pending_purge_after)
         .execute(&state.pool)
         .await;
 
@@ -129,13 +143,13 @@ pub(crate) async fn upload_init(
             Err(sqlx::Error::Database(e)) if e.is_unique_violation() => continue,
             Err(e) => {
                 tracing::error!("upload init insert failed: {e}");
-                s3.abort_multipart(&s3_key, &upload_id).await;
+                let _ = s3.abort_multipart(&s3_key, &upload_id).await;
                 return Err(err(StatusCode::INTERNAL_SERVER_ERROR, "storage error"));
             }
         }
     }
 
-    s3.abort_multipart(&s3_key, &upload_id).await;
+    let _ = s3.abort_multipart(&s3_key, &upload_id).await;
     Err(err(StatusCode::INTERNAL_SERVER_ERROR, "could not allocate id"))
 }
 
@@ -233,18 +247,21 @@ pub(crate) async fn upload_complete(
 
     if let Err(e) = s3.complete_multipart(&key, &upload_id, parts).await {
         tracing::error!("{e}");
-        s3.abort_multipart(&key, &upload_id).await;
-        let _ = sqlx::query("DELETE FROM secrets WHERE id = ? AND status = 'pending'")
-            .bind(&id)
-            .execute(&state.pool)
-            .await;
+        if s3.abort_multipart(&key, &upload_id).await {
+            let _ = sqlx::query("DELETE FROM secrets WHERE id = ? AND status = 'pending'")
+                .bind(&id)
+                .execute(&state.pool)
+                .await;
+        }
         return Err(err(StatusCode::BAD_GATEWAY, "could not complete upload"));
     }
 
-    // Flip to ready and record the creation stats now that bytes are durable.
+    // Flip to ready, restore the creator's full expiry, drop pending reap.
     let now = now_secs();
     let row = sqlx::query(
-        "UPDATE secrets SET status = 'ready' \
+        "UPDATE secrets SET status = 'ready', purge_after = NULL, \
+            expires_at = CASE WHEN nonce != '' THEN CAST(nonce AS INTEGER) ELSE expires_at END, \
+            nonce = '' \
          WHERE id = ? AND storage = 's3' AND status = 'pending' \
          RETURNING kind, size",
     )

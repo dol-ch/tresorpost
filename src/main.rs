@@ -69,8 +69,41 @@ async fn main() {
         tracing::info!("ADMIN_TOKEN not set — admin stats endpoint disabled");
     }
 
+    let max_sqlite_mb: u64 = std::env::var("MAX_SQLITE_MB")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_MAX_SQLITE_MB);
+    let max_sqlite_bytes = max_sqlite_mb.saturating_mul(1024 * 1024);
+    if max_sqlite_mb == 0 {
+        tracing::info!("SQLite storage quota disabled (MAX_SQLITE_MB=0)");
+    } else {
+        tracing::info!("SQLite storage quota: {max_sqlite_mb} MB");
+    }
+
+    let max_s3_gb: u64 = std::env::var("MAX_S3_GB")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_MAX_S3_GB);
+    let max_s3_bytes = max_s3_gb.saturating_mul(1024 * 1024 * 1024);
+    if max_s3_gb == 0 {
+        tracing::info!("S3 storage quota disabled (MAX_S3_GB=0)");
+    } else {
+        tracing::info!("S3 storage quota: {max_s3_gb} GB");
+    }
+
+    let pending_upload_ttl_secs: i64 = std::env::var("PENDING_UPLOAD_TTL_SECS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .filter(|&s| s >= 1)
+        .unwrap_or(DEFAULT_PENDING_UPLOAD_TTL_SECS);
+    tracing::info!("pending upload TTL: {pending_upload_ttl_secs}s");
+
     let pool = db::init_db(&db_path).await;
-    tokio::spawn(db::cleanup_loop(pool.clone(), s3.clone()));
+    tokio::spawn(db::cleanup_loop(
+        pool.clone(),
+        s3.clone(),
+        pending_upload_ttl_secs,
+    ));
 
     let create_limiter = rate::CreateLimiter::from_env();
     if create_limiter.disabled() {
@@ -91,6 +124,9 @@ async fn main() {
         max_ciphertext_chars,
         s3,
         create_limiter,
+        max_sqlite_bytes,
+        max_s3_bytes,
+        pending_upload_ttl_secs,
     };
 
     let api = Router::new()
