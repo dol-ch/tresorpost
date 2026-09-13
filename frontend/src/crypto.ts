@@ -48,6 +48,109 @@ export function decryptBytes(
   return aead.decrypt(ct);
 }
 
+// ---- chunked streaming AEAD (large S3-backed files) ------------------------
+//
+// A multi-GB file is never held in memory in full. It is split into fixed
+// plaintext chunks; each chunk is sealed independently with XChaCha20-Poly1305
+// under a unique nonce and authenticated with associated data (AAD) that binds
+// the chunk's index and whether it is the final chunk. This prevents an
+// attacker (or the untrusted storage) from reordering, dropping or truncating
+// chunks without detection.
+//
+// Nonce = 20-byte random base prefix || 4-byte big-endian counter (24 bytes
+// total, the XChaCha extended-nonce size). AAD = 4-byte big-endian counter ||
+// 1 final-flag byte.
+
+export const STREAM_VERSION = 1;
+/** Base nonce prefix length; the remaining 4 bytes are the chunk counter. */
+const BASE_NONCE_BYTES = NONCE_BYTES - 4; // 20
+
+/** Descriptor stored (non-secret parts) in the server `meta` field. The key
+ *  itself lives ONLY in the URL fragment and is never part of this. */
+export interface StreamMeta {
+  v: number;
+  /** base64 of the 20-byte base nonce prefix. */
+  baseNonce: string;
+  /** Plaintext chunk size in bytes. */
+  chunkSize: number;
+  /** Number of data chunks. */
+  chunkCount: number;
+  /** Total plaintext size in bytes. */
+  size: number;
+  /** base64 of the encrypted header blob (filename, mime, size). */
+  header: string;
+}
+
+export function generateBaseNonce(): Uint8Array {
+  const b = new Uint8Array(BASE_NONCE_BYTES);
+  crypto.getRandomValues(b);
+  return b;
+}
+
+function chunkNonce(base: Uint8Array, counter: number): Uint8Array {
+  const nonce = new Uint8Array(NONCE_BYTES);
+  nonce.set(base, 0);
+  const dv = new DataView(nonce.buffer);
+  dv.setUint32(BASE_NONCE_BYTES, counter >>> 0, false); // big-endian
+  return nonce;
+}
+
+function chunkAad(counter: number, isFinal: boolean): Uint8Array {
+  const aad = new Uint8Array(5);
+  new DataView(aad.buffer).setUint32(0, counter >>> 0, false);
+  aad[4] = isFinal ? 1 : 0;
+  return aad;
+}
+
+/** Encrypt one plaintext chunk. Counter 0 is reserved for the header, so data
+ *  chunk `i` (0-based) uses counter `i + 1`. */
+export function encryptChunk(
+  key: Uint8Array,
+  baseNonce: Uint8Array,
+  counter: number,
+  plaintext: Uint8Array,
+  isFinal: boolean,
+): Uint8Array {
+  const aead = xchacha20poly1305(key, chunkNonce(baseNonce, counter), chunkAad(counter, isFinal));
+  return aead.encrypt(plaintext);
+}
+
+export function decryptChunk(
+  key: Uint8Array,
+  baseNonce: Uint8Array,
+  counter: number,
+  ciphertext: Uint8Array,
+  isFinal: boolean,
+): Uint8Array {
+  const aead = xchacha20poly1305(key, chunkNonce(baseNonce, counter), chunkAad(counter, isFinal));
+  return aead.decrypt(ciphertext);
+}
+
+/** The E2EE header describing the file, sealed as counter 0. */
+export interface StreamHeader {
+  filename: string;
+  mime: string;
+  size: number;
+  kind: "file" | "image";
+}
+
+export function encryptHeader(
+  key: Uint8Array,
+  baseNonce: Uint8Array,
+  header: StreamHeader,
+): Uint8Array {
+  return encryptChunk(key, baseNonce, 0, utf8Encode(JSON.stringify(header)), false);
+}
+
+export function decryptHeader(
+  key: Uint8Array,
+  baseNonce: Uint8Array,
+  headerCiphertext: Uint8Array,
+): StreamHeader {
+  const pt = decryptChunk(key, baseNonce, 0, headerCiphertext, false);
+  return JSON.parse(utf8Decode(pt)) as StreamHeader;
+}
+
 // ---- encoding helpers -------------------------------------------------------
 
 export function bytesToBase64(bytes: Uint8Array): string {
