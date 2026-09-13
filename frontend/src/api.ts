@@ -5,11 +5,13 @@ export interface CreateSecretInput extends Encrypted {
   max_views: number | null;
   kind: "text" | "image" | "file"; // coarse metadata for aggregate stats
   allow_delete: boolean;
+  allow_recipient_delete: boolean;
 }
 
 export interface CreateSecretResult {
   id: string;
   delete_token?: string;
+  recipient_delete_token?: string;
 }
 
 export async function createSecret(input: CreateSecretInput): Promise<CreateSecretResult> {
@@ -90,6 +92,7 @@ export interface UploadInitInput {
   part_count: number;
   meta: string; // opaque stream descriptor
   allow_delete: boolean;
+  allow_recipient_delete: boolean;
 }
 
 export interface UploadInitResult {
@@ -97,6 +100,7 @@ export interface UploadInitResult {
   upload_id: string;
   part_size: number;
   delete_token?: string;
+  recipient_delete_token?: string;
 }
 
 export async function uploadInit(input: UploadInitInput): Promise<UploadInitResult> {

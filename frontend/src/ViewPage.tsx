@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/common";
-import { fetchSecret } from "./api";
+import { fetchSecret, deleteSecret } from "./api";
 import { decryptBytes, base64UrlToBytes, type StreamMeta, type StreamHeader } from "./crypto";
 import { decodePayload, base64ToBlob, type SecretPayload } from "./payload";
 import {
@@ -87,6 +87,7 @@ function RenderedText({ html }: { html: string }) {
 interface Props {
   id: string;
   keyB64Url: string;
+  recipientDeleteToken?: string;
 }
 
 type Status =
@@ -166,7 +167,7 @@ function formatExpiry(sec: number): { absolute: string; relative: string } {
   return { absolute, relative: relativeTime(sec - Date.now() / 1000) };
 }
 
-export function ViewPage({ id, keyB64Url }: Props) {
+export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
   const [status, setStatus] = useState<Status>({ state: "loading" });
   const started = useRef(false);
 
@@ -261,7 +262,14 @@ export function ViewPage({ id, keyB64Url }: Props) {
     );
   }
   if (status.state === "s3file") {
-    return <S3FileView status={status} />;
+    return (
+      <S3FileView
+        status={status}
+        id={id}
+        recipientDeleteToken={recipientDeleteToken}
+        onDestroyed={() => setStatus({ state: "gone" })}
+      />
+    );
   }
 
   const { payload, viewsRemaining, expiresAt } = status;
@@ -308,6 +316,13 @@ export function ViewPage({ id, keyB64Url }: Props) {
       )}
       {payload.kind === "file" && <FileDownload payload={payload} />}
       <div className="actions">
+        {recipientDeleteToken && (
+          <RecipientDestroy
+            id={id}
+            token={recipientDeleteToken}
+            onDestroyed={() => setStatus({ state: "gone" })}
+          />
+        )}
         <a className="btn ghost" href="#/">
           Create your own
         </a>
@@ -318,7 +333,17 @@ export function ViewPage({ id, keyB64Url }: Props) {
 
 type S3Status = Extract<Status, { state: "s3file" }>;
 
-function S3FileView({ status }: { status: S3Status }) {
+function S3FileView({
+  status,
+  id,
+  recipientDeleteToken,
+  onDestroyed,
+}: {
+  status: S3Status;
+  id: string;
+  recipientDeleteToken?: string;
+  onDestroyed: () => void;
+}) {
   const { url, meta, key, header, viewsRemaining, expiresAt } = status;
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [phase, setPhase] = useState<"idle" | "downloading" | "done" | "error">("idle");
@@ -432,11 +457,56 @@ function S3FileView({ status }: { status: S3Status }) {
         )}
       </div>
       <div className="actions">
+        {recipientDeleteToken && (
+          <RecipientDestroy id={id} token={recipientDeleteToken} onDestroyed={onDestroyed} />
+        )}
         <a className="btn ghost" href="#/">
           Create your own
         </a>
       </div>
     </div>
+  );
+}
+
+function RecipientDestroy({
+  id,
+  token,
+  onDestroyed,
+}: {
+  id: string;
+  token: string;
+  onDestroyed: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onClick() {
+    if (
+      !window.confirm(
+        "Permanently delete this from the server? Anyone else with the link will not be able to open it.",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteSecret(id, token);
+      onDestroyed();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button className="btn ghost" onClick={onClick} disabled={busy}>
+        {busy ? "Deleting…" : "Delete permanently"}
+      </button>
+      {error && <p className="error">{error}</p>}
+    </>
   );
 }
 

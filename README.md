@@ -32,6 +32,9 @@ branding (logos, fonts) lives in a swappable theme layer; see
 - **Creator delete link:** optional private `#/d/<id>/<token>` URL so you can
   destroy a note before anyone opens it. The server stores only a SHA-256 hash
   of the token.
+- **Recipient delete:** optional. Embeds a destroy token in the share URL
+  (`#/v/<id>/<key>/<token>`) so the recipient can wipe ciphertext from the
+  server after opening.
 - **Short share links + QR code.** Compact `#/v/<id>/<key>` links (12-char IDs)
   with a scannable QR on the result screen. Legacy `#/s/…` links still open.
 - **Light/dark theme**, syntax highlighting, and copy-all / per-code-block copy
@@ -54,9 +57,9 @@ branding (logos, fonts) lives in a swappable theme layer; see
 
 The server exposes a tiny API and, in production, serves the built SPA:
 
-- `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete }`, returns `{ id, delete_token? }`. `429` if the per-IP create limit is exceeded.
+- `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete, allow_recipient_delete }`, returns `{ id, delete_token?, recipient_delete_token? }`. `429` if the per-IP create limit is exceeded.
 - `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted.
-- `DELETE /api/secrets/{id}` — creator destroy with `{ delete_token }`. Same `404` for unknown id or wrong token.
+- `DELETE /api/secrets/{id}` — destroy with `{ delete_token }` (creator **or** recipient token). Same `404` for unknown id or wrong token.
 - `GET  /api/config` — `{ max_file_bytes, s3_enabled, max_s3_file_bytes }`.
 - `GET  /api/health` — liveness.
 - `POST /api/uploads/init` — begin an S3 multipart upload (large files).
