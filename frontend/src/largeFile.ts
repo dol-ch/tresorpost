@@ -35,6 +35,7 @@ export interface UploadResult {
   id: string;
   key: Uint8Array;
   delete_token?: string;
+  recipient_delete_token?: string;
 }
 
 export type ProgressFn = (done: number, total: number) => void;
@@ -98,10 +99,11 @@ export async function uploadLargeFile(opts: {
   expiresIn: number;
   maxViews: number | null;
   allowDelete: boolean;
+  allowRecipientDelete: boolean;
   onProgress: ProgressFn;
   signal?: AbortSignal;
 }): Promise<UploadResult> {
-  const { file, kind, expiresIn, maxViews, allowDelete, onProgress, signal } = opts;
+  const { file, kind, expiresIn, maxViews, allowDelete, allowRecipientDelete, onProgress, signal } = opts;
 
   const key = generateKey();
   const baseNonce = generateBaseNonce();
@@ -134,6 +136,7 @@ export async function uploadLargeFile(opts: {
     part_count: chunkCount,
     meta: JSON.stringify(meta),
     allow_delete: allowDelete,
+    allow_recipient_delete: allowRecipientDelete,
   });
 
   const parts: CompletedPart[] = [];
@@ -165,7 +168,7 @@ export async function uploadLargeFile(opts: {
   }
 
   await uploadComplete(init.id, parts);
-  return { id: init.id, key, delete_token: init.delete_token };
+  return { id: init.id, key, delete_token: init.delete_token, recipient_delete_token: init.recipient_delete_token };
 }
 
 export function parseMeta(metaStr: string): StreamMeta {

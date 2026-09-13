@@ -175,6 +175,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
         "ALTER TABLE secrets ADD COLUMN upload_id TEXT",
         "ALTER TABLE secrets ADD COLUMN meta TEXT",
         "ALTER TABLE secrets ADD COLUMN delete_token_hash TEXT",
+        "ALTER TABLE secrets ADD COLUMN recipient_delete_hash TEXT",
     ] {
         sqlx::query(stmt).execute(&pool).await.ok();
     }

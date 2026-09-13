@@ -30,6 +30,8 @@ pub(crate) struct UploadInitReq {
     meta: String,
     #[serde(default = "default_allow_delete_upload")]
     allow_delete: bool,
+    #[serde(default)]
+    allow_recipient_delete: bool,
 }
 
 fn default_allow_delete_upload() -> bool {
@@ -43,6 +45,8 @@ pub(crate) struct UploadInitResp {
     part_size: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     delete_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    recipient_delete_token: Option<String>,
 }
 
 pub(crate) async fn upload_init(
@@ -79,6 +83,8 @@ pub(crate) async fn upload_init(
     let s3_key = S3Backend::random_key();
     let delete_token = req.allow_delete.then(generate_delete_token);
     let delete_hash = delete_token.as_deref().map(hash_delete_token);
+    let recipient_delete_token = req.allow_recipient_delete.then(generate_delete_token);
+    let recipient_delete_hash = recipient_delete_token.as_deref().map(hash_delete_token);
 
     let upload_id = s3.create_multipart(&s3_key).await.map_err(|e| {
         tracing::error!("{e}");
@@ -90,8 +96,8 @@ pub(crate) async fn upload_init(
         let res = sqlx::query(
             "INSERT INTO secrets \
              (id, ciphertext, nonce, created_at, expires_at, max_views, views, kind, size, \
-              storage, status, s3_key, upload_id, meta, delete_token_hash) \
-             VALUES (?, '', '', ?, ?, ?, 0, ?, ?, 's3', 'pending', ?, ?, ?, ?)",
+              storage, status, s3_key, upload_id, meta, delete_token_hash, recipient_delete_hash) \
+             VALUES (?, '', '', ?, ?, ?, 0, ?, ?, 's3', 'pending', ?, ?, ?, ?, ?)",
         )
         .bind(&id)
         .bind(now)
@@ -103,6 +109,7 @@ pub(crate) async fn upload_init(
         .bind(&upload_id)
         .bind(&req.meta)
         .bind(&delete_hash)
+        .bind(&recipient_delete_hash)
         .execute(&state.pool)
         .await;
 
@@ -115,6 +122,7 @@ pub(crate) async fn upload_init(
                         upload_id,
                         part_size: req.part_size,
                         delete_token,
+                        recipient_delete_token,
                     }),
                 ));
             }

@@ -46,6 +46,7 @@ export function CreatePage() {
   const [copied, setCopied] = useState(false);
   const [copiedDelete, setCopiedDelete] = useState(false);
   const [allowDelete, setAllowDelete] = useState(true);
+  const [allowRecipientDelete, setAllowRecipientDelete] = useState(false);
   const [deleteUrl, setDeleteUrl] = useState<string | null>(null);
   const [maxFileBytes, setMaxFileBytes] = useState<number>(MAX_FILE_BYTES);
   const [s3Enabled, setS3Enabled] = useState(false);
@@ -119,6 +120,7 @@ export function CreatePage() {
       let id: string;
       let key: Uint8Array;
       let deleteToken: string | undefined;
+      let recipientDeleteToken: string | undefined;
 
       if (useS3) {
         if (!file) throw new Error("Choose a file first.");
@@ -134,6 +136,7 @@ export function CreatePage() {
           expiresIn,
           maxViews: maxViewsVal,
           allowDelete,
+          allowRecipientDelete,
           onProgress: (done, total) =>
             setProgress((p) => ({ done: Math.max(p?.done ?? 0, done), total })),
           signal: ac.signal,
@@ -141,6 +144,7 @@ export function CreatePage() {
         id = res.id;
         key = res.key;
         deleteToken = res.delete_token;
+        recipientDeleteToken = res.recipient_delete_token;
       } else {
         const payload = await buildPayload();
         key = generateKey();
@@ -153,13 +157,17 @@ export function CreatePage() {
           max_views: maxViewsVal,
           kind: payload.kind,
           allow_delete: allowDelete,
+          allow_recipient_delete: allowRecipientDelete,
         });
         id = created.id;
         deleteToken = created.delete_token;
+        recipientDeleteToken = created.recipient_delete_token;
       }
 
       const keyUrl = bytesToBase64Url(key);
-      const url = `${window.location.origin}/#/v/${id}/${keyUrl}`;
+      const url = recipientDeleteToken
+        ? `${window.location.origin}/#/v/${id}/${keyUrl}/${recipientDeleteToken}`
+        : `${window.location.origin}/#/v/${id}/${keyUrl}`;
       setShareUrl(url);
       setDeleteUrl(
         deleteToken
@@ -369,6 +377,21 @@ export function CreatePage() {
         </label>
         <p className="muted small">
           You get a private delete link. It is not part of the share URL.
+        </p>
+      </div>
+
+      <div className="field">
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={allowRecipientDelete}
+            onChange={(e) => setAllowRecipientDelete(e.target.checked)}
+          />
+          Recipient can permanently delete
+        </label>
+        <p className="muted small">
+          Puts a destroy button on the open page. Anyone with the share link
+          can wipe the ciphertext from the server.
         </p>
       </div>
 

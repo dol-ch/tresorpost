@@ -7,13 +7,12 @@ import { brand } from "./brand";
 
 type Route =
   | { name: "create" }
-  | { name: "view"; id: string; key: string }
+  | { name: "view"; id: string; key: string; recipientDeleteToken?: string }
   | { name: "delete"; id: string; token: string }
   | { name: "admin" };
 
 function parseRoute(): Route {
   const hash = window.location.hash.replace(/^#/, "");
-  // Expected view route: /v/<id>/<key> (also accepts legacy /s/…).
   const parts = hash.split("/").filter(Boolean);
   if (parts[0] === "admin") {
     return { name: "admin" };
@@ -22,7 +21,12 @@ function parseRoute(): Route {
     return { name: "delete", id: parts[1], token: parts.slice(2).join("/") };
   }
   if ((parts[0] === "s" || parts[0] === "v") && parts[1] && parts[2]) {
-    return { name: "view", id: parts[1], key: parts.slice(2).join("/") };
+    return {
+      name: "view",
+      id: parts[1],
+      key: parts[2],
+      recipientDeleteToken: parts[3],
+    };
   }
   return { name: "create" };
 }
@@ -121,7 +125,13 @@ export function App() {
             <CreatePage />
           </>
         )}
-        {route.name === "view" && <ViewPage id={route.id} keyB64Url={route.key} />}
+        {route.name === "view" && (
+          <ViewPage
+            id={route.id}
+            keyB64Url={route.key}
+            recipientDeleteToken={route.recipientDeleteToken}
+          />
+        )}
         {route.name === "delete" && <DeletePage id={route.id} token={route.token} />}
         {route.name === "admin" && <AdminPage />}
       </main>

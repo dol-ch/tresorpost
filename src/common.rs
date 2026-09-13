@@ -68,6 +68,10 @@ fn default_allow_delete() -> bool {
     true
 }
 
+fn default_allow_recipient_delete() -> bool {
+    false
+}
+
 /// Default maximum attachment size (MB) when `MAX_FILE_MB` is not set.
 pub(crate) const DEFAULT_MAX_FILE_MB: u64 = 5;
 /// Default maximum S3-backed file size (MB) when `MAX_S3_FILE_MB` is not set.
@@ -116,6 +120,10 @@ pub(crate) struct CreateReq {
     /// the creator can use to destroy the secret. The server stores only a hash.
     #[serde(default = "default_allow_delete")]
     pub(crate) allow_delete: bool,
+    /// When true, a second delete token is embedded in the share URL so the
+    /// recipient can permanently destroy ciphertext after opening.
+    #[serde(default = "default_allow_recipient_delete")]
+    pub(crate) allow_recipient_delete: bool,
 }
 
 /// Normalize a client-provided kind to one of the known buckets.
@@ -147,6 +155,9 @@ pub(crate) struct CreateResp {
     /// Present only when `allow_delete` was true. Keep private — not the share key.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) delete_token: Option<String>,
+    /// Present when `allow_recipient_delete` was true. Goes in the share URL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) recipient_delete_token: Option<String>,
 }
 
 #[derive(Serialize)]

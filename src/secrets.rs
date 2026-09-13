@@ -67,14 +67,16 @@ pub(crate) async fn create_secret(
     let size = (req.ciphertext.len() + req.nonce.len()) as i64;
     let delete_token = req.allow_delete.then(generate_delete_token);
     let delete_hash = delete_token.as_deref().map(hash_delete_token);
+    let recipient_delete_token = req.allow_recipient_delete.then(generate_delete_token);
+    let recipient_delete_hash = recipient_delete_token.as_deref().map(hash_delete_token);
 
     // Generate a short random ID, retrying on the astronomically unlikely event
     // of a primary-key collision.
     for _ in 0..6 {
         let id = generate_id();
         let res = sqlx::query(
-            "INSERT INTO secrets (id, ciphertext, nonce, created_at, expires_at, max_views, views, kind, size, delete_token_hash) \
-             VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)",
+            "INSERT INTO secrets (id, ciphertext, nonce, created_at, expires_at, max_views, views, kind, size, delete_token_hash, recipient_delete_hash) \
+             VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
         )
         .bind(&id)
         .bind(&req.ciphertext)
@@ -85,6 +87,7 @@ pub(crate) async fn create_secret(
         .bind(kind)
         .bind(size)
         .bind(&delete_hash)
+        .bind(&recipient_delete_hash)
         .execute(&state.pool)
         .await;
 
@@ -109,6 +112,7 @@ pub(crate) async fn create_secret(
                     Json(CreateResp {
                         id,
                         delete_token,
+                        recipient_delete_token,
                     }),
                 ));
             }
@@ -236,9 +240,9 @@ pub(crate) struct DeleteReq {
     delete_token: String,
 }
 
-/// Creator-initiated destroy. The plaintext token is never stored; only its
-/// SHA-256 hash is compared (constant-time). Wrong or missing tokens return
-/// the same 404 as an unknown id so existence is not confirmed.
+/// Destroy with a creator or recipient delete token. The plaintext token is
+/// never stored; only SHA-256 hashes are compared. Wrong or missing tokens
+/// return the same 404 as an unknown id.
 pub(crate) async fn delete_secret(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -248,8 +252,9 @@ pub(crate) async fn delete_secret(
         return Err(err(StatusCode::NOT_FOUND, "not found"));
     }
 
-    let hash: Option<String> = sqlx::query_scalar(
-        "SELECT delete_token_hash FROM secrets WHERE id = ? AND expires_at > ?",
+    let row = sqlx::query(
+        "SELECT delete_token_hash, recipient_delete_hash FROM secrets \
+         WHERE id = ? AND expires_at > ?",
     )
     .bind(&id)
     .bind(now_secs())
@@ -260,10 +265,17 @@ pub(crate) async fn delete_secret(
         err(StatusCode::INTERNAL_SERVER_ERROR, "storage error")
     })?;
 
-    let Some(hash) = hash.filter(|h| !h.is_empty()) else {
+    let Some(row) = row else {
         return Err(err(StatusCode::NOT_FOUND, "not found"));
     };
-    if !delete_token_matches(&hash, &req.delete_token) {
+    let creator: Option<String> = row.get("delete_token_hash");
+    let recipient: Option<String> = row.get("recipient_delete_hash");
+    let dummy = "0".repeat(64);
+    let a = creator.filter(|h| h.len() == 64).unwrap_or_else(|| dummy.clone());
+    let b = recipient.filter(|h| h.len() == 64).unwrap_or(dummy);
+    if !(delete_token_matches(&a, &req.delete_token)
+        | delete_token_matches(&b, &req.delete_token))
+    {
         return Err(err(StatusCode::NOT_FOUND, "not found"));
     }
 
