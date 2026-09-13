@@ -167,8 +167,8 @@ single Rust binary.
 
 ## How the encryption flow works
 
-1. The browser generates a random 256-bit key and encrypts the payload with
-   XChaCha20-Poly1305.
+1. The browser generates a random 256-bit (quantum-safe) key and encrypts the
+   payload with XChaCha20-Poly1305.
 2. Only the ciphertext + nonce are uploaded; the server returns a short id.
 3. The share link is `…/#/v/<id>/<base64url-key>` — the key lives in the
    fragment and is never transmitted.
