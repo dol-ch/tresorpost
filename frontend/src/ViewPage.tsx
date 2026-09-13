@@ -483,18 +483,19 @@ function S3FileView({
           </div>
         )}
         {message && <p className="error">{message}</p>}
-        {phase !== "downloading" && (
+        {phase !== "downloading" && !playBlob && (
           <div className="media-actions">
-            {canPlayInBrowser && !playBlob && (
-              <button className="btn primary" onClick={onPlay}>
+            {canPlayInBrowser && (
+              <button className="btn primary fit" onClick={onPlay}>
                 Decrypt &amp; play
               </button>
             )}
-            {phase !== "done" && (
-              <button className={canPlayInBrowser && !playBlob ? "btn ghost" : "btn primary"} onClick={onDownload}>
-                Download &amp; decrypt
-              </button>
-            )}
+            <button
+              className={canPlayInBrowser ? "btn ghost" : "btn primary fit"}
+              onClick={onDownload}
+            >
+              {isVideo ? "Download video" : "Download & decrypt"}
+            </button>
           </div>
         )}
         {phase === "downloading" && (
@@ -562,7 +563,7 @@ function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   return (
-    <div className="media">
+    <div className="video-block">
       {!failed ? (
         <video
           className="player"
@@ -573,15 +574,16 @@ function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
           onError={() => setFailed(true)}
         />
       ) : (
-        <p className="muted small">
+        <p className="muted small video-fallback">
           This browser cannot decode this video (common for AVI and some MOV).
           Download the file and open it in a player.
         </p>
       )}
-      {filename && <p className="muted small">{filename}</p>}
-      <a className="btn ghost" href={url} download={filename ?? "video"}>
-        Download video
-      </a>
+      <div className="media-actions">
+        <a className="btn primary fit" href={url} download={filename ?? "video"}>
+          Download video
+        </a>
+      </div>
     </div>
   );
 }

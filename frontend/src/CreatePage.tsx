@@ -357,53 +357,53 @@ export function CreatePage() {
         </select>
       </div>
 
-      <div className="field">
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={limitViews}
-            onChange={(e) => setLimitViews(e.target.checked)}
-          />
-          Limit number of opens
-        </label>
-        {limitViews && (
-          <input
-            className="numeric"
-            type="number"
-            min={1}
-            value={maxViews}
-            onChange={(e) => setMaxViews(Math.max(1, Number(e.target.value) || 1))}
-          />
-        )}
-      </div>
-
-      <div className="field">
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={allowDelete}
-            onChange={(e) => setAllowDelete(e.target.checked)}
-          />
-          Let me delete this note later
-        </label>
-        <p className="muted small">
-          You get a private delete link. It is not part of the share URL.
-        </p>
-      </div>
-
-      <div className="field">
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={allowRecipientDelete}
-            onChange={(e) => setAllowRecipientDelete(e.target.checked)}
-          />
-          Recipient can permanently delete
-        </label>
-        <p className="muted small">
-          Puts a destroy button on the open page. Anyone with the share link
-          can wipe the ciphertext from the server.
-        </p>
+      <div className="option-list">
+        <div className="option">
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={limitViews}
+              onChange={(e) => setLimitViews(e.target.checked)}
+            />
+            Limit number of opens
+          </label>
+          {limitViews && (
+            <input
+              className="numeric"
+              type="number"
+              min={1}
+              value={maxViews}
+              onChange={(e) => setMaxViews(Math.max(1, Number(e.target.value) || 1))}
+            />
+          )}
+        </div>
+        <div className="option">
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={allowDelete}
+              onChange={(e) => setAllowDelete(e.target.checked)}
+            />
+            Let me delete this note later
+          </label>
+          <p className="option-hint">
+            You get a private delete link. It is not part of the share URL.
+          </p>
+        </div>
+        <div className="option">
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={allowRecipientDelete}
+              onChange={(e) => setAllowRecipientDelete(e.target.checked)}
+            />
+            Recipient can permanently delete
+          </label>
+          <p className="option-hint">
+            Puts a destroy button on the open page. Anyone with the share link
+            can wipe the ciphertext from the server.
+          </p>
+        </div>
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -428,14 +428,16 @@ export function CreatePage() {
         </div>
       )}
 
-      <button className="btn primary" onClick={onCreate} disabled={busy}>
-        {busy ? (useS3 ? "Uploading…" : "Encrypting…") : "Create encrypted link"}
-      </button>
-      {busy && useS3 && (
-        <button className="btn ghost" onClick={onCancel} style={{ marginTop: 8 }}>
-          Cancel
+      <div className="submit-row">
+        <button className="btn primary" onClick={onCreate} disabled={busy}>
+          {busy ? (useS3 ? "Uploading…" : "Encrypting…") : "Create encrypted link"}
         </button>
-      )}
+        {busy && useS3 && (
+          <button className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   );
 }
