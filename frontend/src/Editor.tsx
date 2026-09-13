@@ -13,8 +13,10 @@ import { schema as basicSchema } from "prosemirror-schema-basic";
 import { addListNodes } from "prosemirror-schema-list";
 import { exampleSetup } from "prosemirror-example-setup";
 import { EditorToolbar } from "./EditorToolbar";
+import { codeHighlightPlugin } from "./codeHighlight";
 
 import "prosemirror-view/style/prosemirror.css";
+import "./highlight.css";
 
 const editorSchema = new Schema({
   nodes: addListNodes(basicSchema.spec.nodes, "paragraph block*", "block"),
@@ -37,7 +39,10 @@ export const RichTextEditor = forwardRef<EditorHandle>((_props, ref) => {
     if (!hostRef.current) return;
     const state = EditorState.create({
       schema: editorSchema,
-      plugins: exampleSetup({ schema: editorSchema, menuBar: false }),
+      plugins: [
+        ...exampleSetup({ schema: editorSchema, menuBar: false }),
+        codeHighlightPlugin(),
+      ],
     });
     const v: EditorView = new EditorView(hostRef.current, {
       state,
