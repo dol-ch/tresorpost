@@ -123,7 +123,7 @@ pub(crate) struct CreateReq {
     pub(crate) expires_in: i64,
     /// Optional maximum number of reads before the secret is destroyed.
     pub(crate) max_views: Option<i64>,
-    /// Coarse content kind ("text" | "image" | "file"), stored for aggregate
+    /// Coarse content kind ("text" | "image" | "file" | "video"), stored for aggregate
     /// stats only. NOT the content — the payload itself stays encrypted.
     #[serde(default)]
     pub(crate) kind: Option<String>,
@@ -143,6 +143,7 @@ pub(crate) fn normalize_kind(kind: &Option<String>) -> &'static str {
         Some("text") => "text",
         Some("image") => "image",
         Some("file") => "file",
+        Some("video") => "video",
         _ => "unknown",
     }
 }

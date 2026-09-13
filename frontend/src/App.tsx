@@ -106,7 +106,7 @@ export function App() {
               </p>
               <h1>Share a secret only the recipient can read.</h1>
               <p>
-                Text, images and files are encrypted in your browser and
+                Text, images, video and files are encrypted in your browser and
                 decrypted in theirs. The key lives only in the link — it never
                 reaches the server, which stores nothing but ciphertext.
               </p>

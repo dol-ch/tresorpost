@@ -20,8 +20,9 @@ branding (logos, fonts) lives in a swappable theme layer; see
 - **Quantum-resistant cipher.** Payloads are sealed with **XChaCha20-Poly1305**
   using a 256-bit key. Symmetric ciphers at 256 bits retain ~128-bit security
   even against Grover's algorithm, so they are considered quantum-safe.
-- **Three content types** via a dropdown: **Text** (ProseMirror rich text, no
-  attachments), **Image**, and **File**.
+- **Four content types** via a dropdown: **Text** (ProseMirror rich text, no
+  attachments), **Image**, **Video** (in-browser player when the codec allows,
+  otherwise download), and **File**.
 - **Self-destruct timer:** 1, 5, 15, 30 minutes · 1, 3, 6, 12 hours · 1, 3, 7
   days · 1 month. The view page shows remaining opens and expiry.
 - **Optional open limit:** burn the secret after _N_ opens (numeric input, 1…∞).
@@ -73,7 +74,7 @@ the database keeps only orchestration metadata.
 
 ## Large files (S3-backed, up to ~5 GB)
 
-When the `S3_*` environment variables are set, **file** uploads stream
+When the `S3_*` environment variables are set, **file** and **video** uploads stream
 directly from the browser to S3 via presigned multipart URLs. The server never
 handles the bytes. Encryption stays end-to-end: S3 only stores ciphertext
 chunks sealed with XChaCha20-Poly1305 (chunk index + final flag in AAD).

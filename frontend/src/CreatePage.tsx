@@ -9,6 +9,7 @@ import {
 import {
   encodePayload,
   fileToBase64,
+  mimeForUpload,
   type SecretKind,
   type SecretPayload,
 } from "./payload";
@@ -68,7 +69,7 @@ export function CreatePage() {
       });
   }, []);
 
-  const useS3 = s3Enabled && kind === "file";
+  const useS3 = s3Enabled && (kind === "file" || kind === "video");
   const effectiveMax = useS3 ? maxS3FileBytes : maxFileBytes;
   const maxLabel = humanSize(effectiveMax);
   const fileMaxLabel = humanSize(s3Enabled ? maxS3FileBytes : maxFileBytes);
@@ -109,7 +110,7 @@ export function CreatePage() {
       throw new Error(`File is too large (${humanSize(file.size)}). Max is ${maxLabel}.`);
     }
     const data = await fileToBase64(file);
-    return { kind, data, filename: file.name, mime: file.type || "application/octet-stream" };
+    return { kind, data, filename: file.name, mime: mimeForUpload(file, kind) };
   }
 
   async function onCreate() {
@@ -132,7 +133,7 @@ export function CreatePage() {
         setProgress({ done: 0, total: file.size });
         const res = await uploadLargeFile({
           file,
-          kind: "file",
+          kind: kind === "video" ? "video" : "file",
           expiresIn,
           maxViews: maxViewsVal,
           allowDelete,
@@ -305,9 +306,10 @@ export function CreatePage() {
     <div className="card">
       <div className="field">
         <label>Type</label>
-        <select value={kind} onChange={(e) => { setKind(e.target.value as SecretKind); setError(null); }}>
+        <select value={kind} onChange={(e) => { setKind(e.target.value as SecretKind); setFile(null); setError(null); }}>
           <option value="text">Text</option>
           <option value="image">Image</option>
+          <option value="video">Video (max {fileMaxLabel})</option>
           <option value="file">File (max {fileMaxLabel})</option>
         </select>
       </div>
@@ -319,10 +321,18 @@ export function CreatePage() {
         </div>
       ) : (
         <div className="field">
-          <label>{kind === "image" ? "Image" : "File"} (max {maxLabel})</label>
+          <label>
+            {kind === "image" ? "Image" : kind === "video" ? "Video" : "File"} (max {maxLabel})
+          </label>
           <input
             type="file"
-            accept={kind === "image" ? "image/*" : undefined}
+            accept={
+              kind === "image"
+                ? "image/*"
+                : kind === "video"
+                  ? "video/*,.mov,.avi,.mkv,.webm,.mp4,.m4v,.ogv,.3gp"
+                  : undefined
+            }
             onChange={onFileChange}
           />
           {file && (

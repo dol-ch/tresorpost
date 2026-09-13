@@ -22,6 +22,7 @@ import {
   uploadComplete,
   type CompletedPart,
 } from "./api";
+import { mimeForUpload } from "./payload";
 
 /** Plaintext chunk size (8 MiB). Each encrypted chunk becomes exactly one S3
  *  multipart part; 8 MiB comfortably exceeds S3's 5 MiB minimum part size. */
@@ -95,7 +96,7 @@ function putPart(
 /** Encrypt `file` in chunks and upload directly to S3 via presigned parts. */
 export async function uploadLargeFile(opts: {
   file: File;
-  kind: "file" | "image";
+  kind: "file" | "image" | "video";
   expiresIn: number;
   maxViews: number | null;
   allowDelete: boolean;
@@ -112,7 +113,7 @@ export async function uploadLargeFile(opts: {
   // Seal the file metadata (never sent in cleartext) as counter 0.
   const header: StreamHeader = {
     filename: file.name,
-    mime: file.type || "application/octet-stream",
+    mime: mimeForUpload(file, kind),
     size: file.size,
     kind,
   };
@@ -276,6 +277,21 @@ export async function downloadLargeFile(opts: {
     if (sink.abort) await sink.abort().catch(() => {});
     throw e;
   }
+}
+
+/** Accumulate plaintext in memory (in-browser playback). */
+export function collectingSink(mime: string): DecryptSink & { result: () => Blob } {
+  const parts: Uint8Array[] = [];
+  return {
+    write: async (chunk) => {
+      parts.push(chunk);
+    },
+    close: async () => {},
+    abort: async () => {
+      parts.length = 0;
+    },
+    result: () => new Blob(parts as BlobPart[], { type: mime }),
+  };
 }
 
 /** Detect the File System Access API (streaming save straight to disk). */

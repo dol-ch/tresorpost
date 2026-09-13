@@ -138,7 +138,7 @@ pub(crate) async fn admin_stats(
     let get_m = |k: &str| m.get(k).copied().unwrap_or(0);
 
     let mut lifetime_by_kind: HashMap<String, i64> = HashMap::new();
-    for k in ["text", "image", "file", "unknown"] {
+    for k in ["text", "image", "file", "video", "unknown"] {
         lifetime_by_kind.insert(k.to_string(), get_m(&format!("created_{k}")));
     }
 
