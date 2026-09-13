@@ -131,7 +131,7 @@ export interface StreamHeader {
   filename: string;
   mime: string;
   size: number;
-  kind: "file" | "image";
+  kind: "file" | "image" | "video";
 }
 
 export function encryptHeader(

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/common";
 import { fetchSecret, deleteSecret } from "./api";
@@ -11,6 +11,7 @@ import {
   hasFileSystemAccess,
   fileSystemSink,
   blobSink,
+  collectingSink,
   FALLBACK_MAX_BYTES,
 } from "./largeFile";
 import { humanSize } from "./options";
@@ -314,6 +315,12 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
           <p className="muted small">{payload.filename}</p>
         </div>
       )}
+      {payload.kind === "video" && (
+        <VideoPlayer
+          blob={base64ToBlob(payload.data, payload.mime ?? "video/mp4")}
+          filename={payload.filename}
+        />
+      )}
       {payload.kind === "file" && <FileDownload payload={payload} />}
       <div className="actions">
         {recipientDeleteToken && (
@@ -348,8 +355,12 @@ function S3FileView({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [phase, setPhase] = useState<"idle" | "downloading" | "done" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [playBlob, setPlayBlob] = useState<Blob | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const expiry = formatExpiry(expiresAt);
+  const isVideo =
+    header.kind === "video" || (header.mime || "").startsWith("video/");
+  const canPlayInBrowser = isVideo && header.size <= FALLBACK_MAX_BYTES;
   const opensLimited = viewsRemaining !== null;
   let opensLine: string | null = null;
   if (opensLimited) {
@@ -378,6 +389,27 @@ function S3FileView({
       setMessage(e instanceof Error ? e.message : String(e));
       return;
     }
+    await runDecrypt(sink, false);
+  }
+
+  async function onPlay() {
+    setMessage(null);
+    if (header.size > FALLBACK_MAX_BYTES) {
+      setPhase("error");
+      setMessage(
+        `This video is ${humanSize(header.size)} — too large to play in the browser. Download it instead.`,
+      );
+      return;
+    }
+    const sink = collectingSink(header.mime || "video/mp4");
+    await runDecrypt(sink, true);
+    setPlayBlob(sink.result());
+  }
+
+  async function runDecrypt(
+    sink: Parameters<typeof downloadLargeFile>[0]["sink"],
+    forPlayback: boolean,
+  ) {
     const ac = new AbortController();
     abortRef.current = ac;
     setPhase("downloading");
@@ -396,6 +428,7 @@ function S3FileView({
     } catch (e) {
       setPhase("error");
       setMessage(e instanceof Error ? e.message : String(e));
+      if (forPlayback) setPlayBlob(null);
     } finally {
       abortRef.current = null;
     }
@@ -425,6 +458,7 @@ function S3FileView({
       <div className="media center">
         <p className="file-name">{header.filename || "download"}</p>
         <p className="muted small">{humanSize(header.size)}</p>
+        {playBlob && <VideoPlayer blob={playBlob} filename={header.filename} />}
         {progress && (
           <div className="progress" role="status" aria-live="polite">
             <div className="progress-bar">
@@ -436,8 +470,12 @@ function S3FileView({
               />
             </div>
             <p className="muted small progress-label">
-              {phase === "done" ? "Downloaded" : "Downloading & decrypting"}:{" "}
-              {humanSize(Math.max(0, progress.done))} / {humanSize(progress.total)}
+              {phase === "done"
+                ? playBlob
+                  ? "Ready to play"
+                  : "Downloaded"
+                : "Downloading & decrypting"}
+              : {humanSize(Math.max(0, progress.done))} / {humanSize(progress.total)}
               {progress.total
                 ? ` (${Math.min(100, Math.max(0, Math.floor((progress.done / progress.total) * 100)))}%)`
                 : ""}
@@ -445,10 +483,19 @@ function S3FileView({
           </div>
         )}
         {message && <p className="error">{message}</p>}
-        {phase !== "downloading" && phase !== "done" && (
-          <button className="btn primary" onClick={onDownload}>
-            Download &amp; decrypt
-          </button>
+        {phase !== "downloading" && (
+          <div className="media-actions">
+            {canPlayInBrowser && !playBlob && (
+              <button className="btn primary" onClick={onPlay}>
+                Decrypt &amp; play
+              </button>
+            )}
+            {phase !== "done" && (
+              <button className={canPlayInBrowser && !playBlob ? "btn ghost" : "btn primary"} onClick={onDownload}>
+                Download &amp; decrypt
+              </button>
+            )}
+          </div>
         )}
         {phase === "downloading" && (
           <button className="btn ghost" onClick={() => abortRef.current?.abort()}>
@@ -507,6 +554,35 @@ function RecipientDestroy({
       </button>
       {error && <p className="error">{error}</p>}
     </>
+  );
+}
+
+function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
+  const url = useMemo(() => URL.createObjectURL(blob), [blob]);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  return (
+    <div className="media">
+      {!failed ? (
+        <video
+          className="player"
+          controls
+          playsInline
+          preload="metadata"
+          src={url}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <p className="muted small">
+          This browser cannot decode this video (common for AVI and some MOV).
+          Download the file and open it in a player.
+        </p>
+      )}
+      {filename && <p className="muted small">{filename}</p>}
+      <a className="btn ghost" href={url} download={filename ?? "video"}>
+        Download video
+      </a>
+    </div>
   );
 }
 

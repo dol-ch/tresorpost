@@ -3,7 +3,7 @@ import type { Encrypted } from "./crypto";
 export interface CreateSecretInput extends Encrypted {
   expires_in: number; // seconds
   max_views: number | null;
-  kind: "text" | "image" | "file"; // coarse metadata for aggregate stats
+  kind: "text" | "image" | "file" | "video"; // coarse metadata for aggregate stats
   allow_delete: boolean;
   allow_recipient_delete: boolean;
 }
@@ -90,7 +90,7 @@ export async function fetchSecret(id: string): Promise<FetchedAny | null> {
 export interface UploadInitInput {
   expires_in: number;
   max_views: number | null;
-  kind: "file" | "image";
+  kind: "file" | "image" | "video";
   total_size: number;
   part_size: number;
   part_count: number;

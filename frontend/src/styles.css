@@ -453,10 +453,24 @@ code {
   text-align: center;
 }
 
-.media img {
+.media img,
+.media .player {
   max-width: 100%;
   border-radius: var(--radius);
   border: 1px solid var(--hair);
+}
+
+.media .player {
+  width: 100%;
+  background: #000;
+}
+
+.media-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
 }
 
 .file-name {

@@ -1,7 +1,7 @@
 //! Optional S3-compatible storage backend for large files.
 //!
 //! When the `S3_*` environment variables are configured, `kind=file` (and
-//! `image`) uploads are streamed **directly** from the browser to S3 using
+//! `image` / `video`) uploads are streamed **directly** from the browser to S3 using
 //! presigned multipart-upload URLs. The server never sees the file bytes — it
 //! only orchestrates the multipart lifecycle (init → per-part presign →
 //! complete) and issues short-lived presigned GET URLs for download. The bytes

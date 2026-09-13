@@ -154,6 +154,7 @@ export function AdminPage() {
     ["text", "Text"],
     ["image", "Images"],
     ["file", "Files"],
+    ["video", "Videos"],
   ];
   const series = buildSeries(stats.daily, 14);
   const maxDay = Math.max(1, ...series.map((p) => p.count));
