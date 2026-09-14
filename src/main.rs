@@ -117,6 +117,28 @@ async fn main() {
         );
     }
 
+    let read_limiter = rate::ReadLimiter::from_env();
+    if read_limiter.disabled() {
+        tracing::info!("read rate limit disabled (READ_RATE_LIMIT=0)");
+    } else {
+        tracing::info!(
+            max = read_limiter.max(),
+            window_secs = read_limiter.window_secs(),
+            "read/delete rate limit enabled"
+        );
+    }
+
+    let admin_auth_limiter = rate::AdminAuthLimiter::from_env();
+    if admin_auth_limiter.disabled() {
+        tracing::info!("admin auth failure limit disabled (ADMIN_AUTH_MAX_FAILURES=0)");
+    } else {
+        tracing::info!(
+            max = admin_auth_limiter.max(),
+            window_secs = admin_auth_limiter.window_secs(),
+            "admin auth failure limit enabled"
+        );
+    }
+
     let state = AppState {
         pool,
         db_path: db_path.clone(),
@@ -125,6 +147,8 @@ async fn main() {
         max_ciphertext_chars,
         s3,
         create_limiter,
+        read_limiter,
+        admin_auth_limiter,
         max_sqlite_bytes,
         max_s3_bytes,
         pending_upload_ttl_secs,
@@ -157,7 +181,7 @@ async fn main() {
         tracing::info!("no built frontend at {static_dir}; API only");
     }
 
-    let app = app
+    let app = security_headers_layer(app)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
