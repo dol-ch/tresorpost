@@ -1,6 +1,10 @@
 //! SQLite schema, expiry purge, storage quotas, and cleanup loop.
 
-use std::{collections::HashSet, path::PathBuf, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+    time::Duration,
+};
 
 use axum::{http::StatusCode, Json};
 use sqlx::{
@@ -398,6 +402,20 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
     pool
 }
 
+/// All-time counters from the `metrics` table (O(rows in metrics), not a secrets scan).
+pub(crate) async fn load_metrics(pool: &SqlitePool) -> HashMap<String, i64> {
+    let mut m: HashMap<String, i64> = HashMap::new();
+    if let Ok(rows) = sqlx::query("SELECT name, value FROM metrics")
+        .fetch_all(pool)
+        .await
+    {
+        for row in rows {
+            m.insert(row.get("name"), row.get("value"));
+        }
+    }
+    m
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -529,6 +547,28 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(left, 1);
+        drop(pool);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn metrics_increment_without_scanning_secrets() {
+        let (path, dir) = test_db_path();
+        let pool = init_db(&path).await;
+        bump(&pool, "created_total", 2).await;
+        bump(&pool, "created_image", 1).await;
+        bump(&pool, "created_file", 1).await;
+        bump(&pool, "bytes_created_total", 3_000).await;
+        let m = load_metrics(&pool).await;
+        assert_eq!(m.get("created_total").copied().unwrap_or(0), 2);
+        assert_eq!(m.get("created_image").copied().unwrap_or(0), 1);
+        assert_eq!(m.get("created_file").copied().unwrap_or(0), 1);
+        assert_eq!(m.get("bytes_created_total").copied().unwrap_or(0), 3_000);
+        let secrets: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM secrets")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(secrets, 0);
         drop(pool);
         let _ = std::fs::remove_dir_all(&dir);
     }

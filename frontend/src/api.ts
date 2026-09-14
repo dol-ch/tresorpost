@@ -70,6 +70,24 @@ export async function fetchConfig(): Promise<AppConfig> {
   return (await res.json()) as AppConfig;
 }
 
+/** Public all-time aggregates. No tokens, ids, or ciphertext. */
+export interface PublicStats {
+  links_created: number;
+  bytes_transferred: number;
+  by_kind: {
+    text?: number;
+    image?: number;
+    video?: number;
+    file?: number;
+  };
+}
+
+export async function fetchPublicStats(): Promise<PublicStats> {
+  const res = await fetch("/api/stats");
+  if (!res.ok) throw new Error(`request failed (${res.status})`);
+  return (await res.json()) as PublicStats;
+}
+
 /** An S3-backed large-file secret: the ciphertext lives in object storage and
  *  is fetched from a short-lived presigned URL. */
 export interface FetchedS3Secret {

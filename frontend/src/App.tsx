@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CreatePage } from "./CreatePage";
+import { HomepageStats } from "./HomepageStats";
 import { ViewPage } from "./ViewPage";
 import { DeletePage } from "./DeletePage";
 import { AdminPage } from "./AdminPage";
@@ -85,6 +86,7 @@ export function App() {
                 <Badge variant="outline">Zero-knowledge server</Badge>
               </div>
             </section>
+            <HomepageStats />
             <CreatePage />
           </>
         )}

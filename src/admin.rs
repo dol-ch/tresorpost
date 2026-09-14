@@ -126,15 +126,7 @@ pub(crate) async fn admin_stats(
         }
     }
 
-    let mut m: HashMap<String, i64> = HashMap::new();
-    if let Ok(rows) = sqlx::query("SELECT name, value FROM metrics")
-        .fetch_all(&state.pool)
-        .await
-    {
-        for row in rows {
-            m.insert(row.get("name"), row.get("value"));
-        }
-    }
+    let m = crate::db::load_metrics(&state.pool).await;
     let get_m = |k: &str| m.get(k).copied().unwrap_or(0);
 
     let mut lifetime_by_kind: HashMap<String, i64> = HashMap::new();
