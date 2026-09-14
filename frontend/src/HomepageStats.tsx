@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { fetchPublicStats, type PublicStats } from "./api";
 import { humanSize } from "./options";
-import { Card, CardDescription, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 function formatCount(n: number): string {
   return Math.max(0, Math.round(n)).toLocaleString("en-US");
 }
 
-function StatCard({
+function Stat({
   label,
   value,
   hint,
@@ -17,15 +17,15 @@ function StatCard({
   hint?: string;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription>{label}</CardDescription>
-        <p className="font-heading text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl">
-          {value}
-        </p>
-        {hint ? <CardDescription>{hint}</CardDescription> : null}
-      </CardHeader>
-    </Card>
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-0.5 font-heading text-lg font-medium tabular-nums tracking-tight">
+        {value}
+      </p>
+      {hint ? (
+        <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -48,24 +48,24 @@ export function HomepageStats() {
   const texts = stats.by_kind.text ?? 0;
 
   return (
-    <section className="mb-8" aria-label="All-time usage">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <StatCard
+    <section className="mt-10" aria-label="All-time usage">
+      <Separator className="mb-5" />
+      <p className="mb-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        All-time usage
+      </p>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+        <Stat
           label="Links created"
           value={formatCount(stats.links_created)}
           hint="All time"
         />
-        <StatCard
+        <Stat
           label="Transferred"
           value={humanSize(stats.bytes_transferred)}
           hint="Encrypted ciphertext, all time"
         />
-        <StatCard
-          label="Images"
-          value={formatCount(images)}
-          hint="All time"
-        />
-        <StatCard
+        <Stat label="Images" value={formatCount(images)} hint="All time" />
+        <Stat
           label="Files"
           value={formatCount(files)}
           hint={`${formatCount(texts)} notes · ${formatCount(videos)} videos`}
