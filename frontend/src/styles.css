@@ -325,10 +325,10 @@ code {
 
 .share-block {
   display: flex;
-  gap: 22px;
+  flex-direction: column;
+  gap: 18px;
   margin-top: 18px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .qr {
@@ -336,35 +336,43 @@ code {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  flex: 0 0 auto;
+  align-self: center;
 }
 
 .qr img {
   width: 148px;
   height: 148px;
   border-radius: 8px;
-  border: 1px solid var(--hair);
+  border: 1px solid var(--hair-strong);
   background: #fff;
   padding: 8px;
   display: block;
 }
 
 .share-controls {
-  flex: 1 1 300px;
-  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
 }
 
 .share-row {
   display: flex;
   gap: 8px;
   margin: 0 0 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .share-input {
   flex: 1;
+  min-width: 0;
+  min-height: 44px;
   font-family: var(--font-mono);
   font-size: 12.5px;
   letter-spacing: 0.01em;
+  border: 1px solid var(--hair-strong);
 }
 
 /* ── View page ───────────────────────────────────────────────── */
@@ -496,7 +504,8 @@ code {
 
 .media img,
 .media .player,
-.video-block .player {
+.video-block .player,
+.video-block img {
   max-width: 100%;
   border-radius: var(--radius);
   border: 1px solid var(--hair);

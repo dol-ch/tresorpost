@@ -25,6 +25,11 @@ export async function createSecret(input: CreateSecretInput): Promise<CreateSecr
     if (res.status === 429) {
       throw new Error(msg.error || "Too many notes created. Please wait and try again.");
     }
+    if (res.status === 413) {
+      throw new Error(
+        "File is too large for this server. Enable S3 or raise the upload size limit.",
+      );
+    }
     if (res.status === 507) {
       throw new Error(msg.error || "Storage is full. Please try again later.");
     }
