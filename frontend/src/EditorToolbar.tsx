@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import type { Command, EditorState } from "prosemirror-state";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import type { EditorView } from "prosemirror-view";
 import type { MarkType, NodeType } from "prosemirror-model";
 import { toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
@@ -194,7 +196,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
       {
         key: "h1",
         title: "Heading 1",
-        content: <span className="pm-txt">H1</span>,
+        content: <span className="text-[10px] font-semibold">H1</span>,
         active: blockActive(state, heading, { level: 1 }),
         enabled: true,
         onRun: () => toggleHeading(1),
@@ -202,7 +204,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
       {
         key: "h2",
         title: "Heading 2",
-        content: <span className="pm-txt">H2</span>,
+        content: <span className="text-[10px] font-semibold">H2</span>,
         active: blockActive(state, heading, { level: 2 }),
         enabled: true,
         onRun: () => toggleHeading(2),
@@ -260,25 +262,25 @@ export function EditorToolbar({ view }: { view: EditorView }) {
   ];
 
   return (
-    <div className="pm-toolbar" role="toolbar" aria-label="Formatting">
+    <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/40 p-1" role="toolbar" aria-label="Formatting">
       {groups.map((group, gi) => (
-        <div className="pm-group" key={gi}>
-          {gi > 0 && <span className="pm-divider" aria-hidden="true" />}
+        <div className="flex items-center gap-0.5" key={gi}>
+          {gi > 0 && <Separator orientation="vertical" className="mx-1 h-5" />}
           {group.map((it) => (
-            <button
+            <Button
               key={it.key}
               type="button"
-              className={`pm-btn${it.active ? " is-active" : ""}`}
+              size="icon-sm"
+              variant={it.active ? "secondary" : "ghost"}
               title={it.title}
               aria-label={it.title}
               aria-pressed={it.active ? true : undefined}
               disabled={!it.enabled}
-              // Keep the editor selection while clicking a toolbar button.
               onMouseDown={(e) => e.preventDefault()}
               onClick={it.onRun}
             >
               {it.content}
-            </button>
+            </Button>
           ))}
         </div>
       ))}

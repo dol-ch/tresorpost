@@ -16,6 +16,7 @@
                   ? "light"
                   : "dark";
         }
+        document.documentElement.classList.toggle("dark", t === "dark");
         document.documentElement.dataset.theme = t;
       } catch (e) {}
     })();
