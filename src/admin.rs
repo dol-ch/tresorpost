@@ -1,9 +1,9 @@
 //! Token-protected admin stats, active listing, and purge.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, net::SocketAddr};
 
 use axum::{
-    extract::State,
+    extract::{ConnectInfo, State},
     http::{HeaderMap, StatusCode},
     Json,
 };
@@ -14,19 +14,29 @@ use crate::common::*;
 use crate::db::{db_file_bytes, purge_expired};
 
 /// Validate the `x-admin-token` header against the configured token. Returns an
-/// error response when admin is disabled or the token is wrong.
+/// error response when admin is disabled or the token is wrong. Failed attempts
+/// are rate-limited per client IP (see `AdminAuthLimiter`).
 pub(crate) fn check_admin(
     state: &AppState,
     headers: &HeaderMap,
+    peer: ConnectInfo<SocketAddr>,
 ) -> Result<(), (StatusCode, Json<ApiError>)> {
     let Some(expected) = state.admin_token.as_deref() else {
         return Err(err(StatusCode::NOT_FOUND, "admin disabled"));
     };
+    let ip = crate::rate::client_ip(headers, peer.0);
+    if let Err(secs) = state.admin_auth_limiter.check(ip) {
+        return Err(err(
+            StatusCode::TOO_MANY_REQUESTS,
+            &format!("too many failed admin logins, retry in {secs}s"),
+        ));
+    }
     let provided = headers
         .get("x-admin-token")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
     if provided.is_empty() || !constant_time_eq_str(provided, expected) {
+        state.admin_auth_limiter.record_failure(ip);
         return Err(err(StatusCode::UNAUTHORIZED, "invalid admin token"));
     }
     Ok(())
@@ -76,9 +86,10 @@ pub(crate) struct StorageStats {
 /// ciphertext or key material.
 pub(crate) async fn admin_stats(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
 ) -> Result<Json<AdminStats>, (StatusCode, Json<ApiError>)> {
-    check_admin(&state, &headers)?;
+    check_admin(&state, &headers, ConnectInfo(peer))?;
 
     let now = now_secs();
 
@@ -165,9 +176,10 @@ pub(crate) struct PurgeResp {
 /// Admin action: delete all currently-expired secrets immediately.
 pub(crate) async fn admin_purge(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
 ) -> Result<Json<PurgeResp>, (StatusCode, Json<ApiError>)> {
-    check_admin(&state, &headers)?;
+    check_admin(&state, &headers, ConnectInfo(peer))?;
     let now = now_secs();
     let purged = purge_expired(
         &state.pool,
@@ -203,9 +215,10 @@ pub(crate) struct ActiveResp {
 /// first. Exposes only metadata (never ciphertext or keys).
 pub(crate) async fn admin_active(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
 ) -> Result<Json<ActiveResp>, (StatusCode, Json<ApiError>)> {
-    check_admin(&state, &headers)?;
+    check_admin(&state, &headers, ConnectInfo(peer))?;
     let now = now_secs();
 
     let total: i64 =

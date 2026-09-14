@@ -1,8 +1,12 @@
-//! Shared types, IDs, metrics helpers, and error responses.
+//! Shared types, IDs, metrics helpers, error responses, and HTTP security headers.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::{http::StatusCode, Json};
+use axum::{
+    http::{header, HeaderName, HeaderValue, StatusCode},
+    Json, Router,
+};
+use tower_http::set_header::SetResponseHeaderLayer;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
@@ -107,6 +111,8 @@ pub(crate) struct AppState {
     pub(crate) max_ciphertext_chars: usize,
     pub(crate) s3: Option<S3Backend>,
     pub(crate) create_limiter: crate::rate::CreateLimiter,
+    pub(crate) read_limiter: crate::rate::ReadLimiter,
+    pub(crate) admin_auth_limiter: crate::rate::AdminAuthLimiter,
     /// 0 = unlimited.
     pub(crate) max_sqlite_bytes: u64,
     /// 0 = unlimited. Compared to SUM(size) of rows that have an s3_key.
@@ -191,4 +197,103 @@ pub(crate) fn err(status: StatusCode, msg: &str) -> (StatusCode, Json<ApiError>)
             error: msg.to_string(),
         }),
     )
+}
+
+/// Origin (`scheme://host[:port]`) for CSP `connect-src` from `S3_ENDPOINT`.
+pub(crate) fn s3_connect_origin(endpoint: &str) -> String {
+    let s = endpoint.trim();
+    if let Some(scheme_end) = s.find("://") {
+        let after = &s[scheme_end + 3..];
+        if let Some(slash) = after.find('/') {
+            return s[..scheme_end + 3 + slash].trim_end_matches('/').to_string();
+        }
+    }
+    s.trim_end_matches('/').to_string()
+}
+
+/// Build CSP. `connect-src` is `'self'` plus the S3 origin when configured.
+pub(crate) fn build_content_security_policy(s3_endpoint: Option<&str>) -> String {
+    let connect = match s3_endpoint.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(ep) => format!("'self' {}", s3_connect_origin(ep)),
+        None => "'self'".to_string(),
+    };
+    format!(
+        "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
+         img-src 'self' blob: data:; media-src 'self' blob:; connect-src {connect}; \
+         base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+    )
+}
+
+fn csp_from_env() -> String {
+    build_content_security_policy(std::env::var("S3_ENDPOINT").ok().as_deref())
+}
+
+fn header_value(s: &str) -> HeaderValue {
+    HeaderValue::from_str(s).unwrap_or_else(|_| HeaderValue::from_static("invalid"))
+}
+
+/// Apply defense-in-depth HTTP headers to the whole app (API + `ServeDir`).
+pub(crate) fn security_headers_layer<S>(router: Router<S>) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    let csp = header_value(&csp_from_env());
+    router
+        .layer(SetResponseHeaderLayer::overriding(
+            HeaderName::from_static("content-security-policy"),
+            csp,
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::REFERRER_POLICY,
+            HeaderValue::from_static("no-referrer"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_FRAME_OPTIONS,
+            HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            HeaderName::from_static("permissions-policy"),
+            HeaderValue::from_static("geolocation=(), camera=(), microphone=(), payment=()"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static("max-age=63072000; includeSubDomains"),
+        ))
+}
+
+#[cfg(test)]
+mod security_header_tests {
+    use super::*;
+
+    #[test]
+    fn csp_without_s3_is_self_only() {
+        let csp = build_content_security_policy(None);
+        assert!(csp.contains("script-src 'self'"));
+        assert!(csp.contains("style-src 'self' 'unsafe-inline'"));
+        assert!(csp.contains("img-src 'self' blob: data:"));
+        assert!(csp.contains("media-src 'self' blob:"));
+        assert!(csp.contains("connect-src 'self'"));
+        assert!(!csp.contains("connect-src 'self' http"));
+        assert!(csp.contains("default-src 'none'"));
+        assert!(csp.contains("frame-ancestors 'none'"));
+    }
+
+    #[test]
+    fn csp_includes_s3_origin_not_path() {
+        let csp = build_content_security_policy(Some("https://s3.example.com/bucket"));
+        assert!(csp.contains("connect-src 'self' https://s3.example.com"));
+        assert!(!csp.contains("/bucket"));
+    }
+
+    #[test]
+    fn s3_origin_keeps_port() {
+        assert_eq!(
+            s3_connect_origin("http://localhost:9000"),
+            "http://localhost:9000"
+        );
+    }
 }

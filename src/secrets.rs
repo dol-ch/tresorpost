@@ -163,8 +163,11 @@ pub(crate) async fn create_secret(
 
 pub(crate) async fn read_secret(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiError>)> {
+    crate::rate::enforce_read_limit(&state, &headers, ConnectInfo(peer))?;
     let now = now_secs();
 
     // Atomically claim one view. The row is only returned if it still exists,
@@ -273,9 +276,12 @@ pub(crate) struct DeleteReq {
 /// return the same 404 as an unknown id.
 pub(crate) async fn delete_secret(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Path(id): Path<String>,
     Json(req): Json<DeleteReq>,
 ) -> Result<StatusCode, (StatusCode, Json<ApiError>)> {
+    crate::rate::enforce_read_limit(&state, &headers, ConnectInfo(peer))?;
     if req.delete_token.is_empty() || req.delete_token.len() > 128 {
         return Err(err(StatusCode::NOT_FOUND, "not found"));
     }
