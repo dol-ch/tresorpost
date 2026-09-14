@@ -8,6 +8,27 @@ import {
   type DailyPoint,
 } from "./api";
 import { humanSize } from "./options";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const TOKEN_KEY = "et_admin_token";
 
@@ -110,41 +131,49 @@ export function AdminPage() {
 
   if (!authed || !stats || !active) {
     return (
-      <div className="card admin-gate">
-        <p className="eyebrow">
-          <span className="num">•</span>&nbsp;&nbsp;— Admin
-        </p>
-        <h2>Dashboard access</h2>
-        <p className="muted small">
-          Enter the admin token (server <code>ADMIN_TOKEN</code>). Only aggregate
-          metadata is shown — never any content or keys.
-        </p>
-        <form
-          className="share-row"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (token) load(token);
-          }}
-        >
-          <input
-            className="share-input"
-            type="password"
-            placeholder="admin token"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            autoFocus
-          />
-          <button className="btn primary" type="submit" disabled={busy || !token}>
-            {busy ? "Checking…" : "Unlock"}
-          </button>
-        </form>
-        {error && <p className="error">{error}</p>}
-        <div className="actions">
-          <a className="btn ghost" href="#/">
-            Back
-          </a>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Dashboard access</CardTitle>
+          <CardDescription>
+            Enter the admin token (server <code className="font-mono text-xs">ADMIN_TOKEN</code>).
+            Only aggregate metadata is shown — never any content or keys.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (token) load(token);
+            }}
+          >
+            <div className="grid flex-1 gap-2">
+              <Label htmlFor="admin-token">Admin token</Label>
+              <Input
+                id="admin-token"
+                type="password"
+                placeholder="admin token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <Button type="submit" disabled={busy || !token}>
+              {busy ? "Checking…" : "Unlock"}
+            </Button>
+          </form>
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button variant="ghost" asChild>
+            <a href="#/">Back</a>
+          </Button>
+        </CardFooter>
+      </Card>
     );
   }
 
@@ -160,30 +189,30 @@ export function AdminPage() {
   const maxDay = Math.max(1, ...series.map((p) => p.count));
 
   return (
-    <div className="admin">
-      <div className="admin-head">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="eyebrow">
-            <span className="num">•</span>&nbsp;&nbsp;— Admin
-          </p>
-          <h2>Service statistics</h2>
+          <h2 className="font-heading text-xl font-semibold tracking-tight">
+            Service statistics
+          </h2>
+          <p className="text-sm text-muted-foreground">Aggregate metadata only</p>
         </div>
-        <div className="actions">
-          <button className="btn ghost" onClick={onPurge} disabled={busy}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={onPurge} disabled={busy}>
             Purge expired now
-          </button>
-          <button className="btn ghost" onClick={() => load(token)} disabled={busy}>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => load(token)} disabled={busy}>
             {busy ? "…" : "Refresh"}
-          </button>
-          <button className="btn ghost" onClick={logout}>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={logout}>
             Lock
-          </button>
+          </Button>
         </div>
       </div>
 
-      {purgeMsg && <p className="muted small purge-msg">{purgeMsg}</p>}
+      {purgeMsg && <p className="text-sm text-muted-foreground">{purgeMsg}</p>}
 
-      <div className="stat-grid">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Stat label="Storage used" value={humanSize(stats.storage.db_file_bytes)} sub="SQLite file on disk" />
         <Stat label="Active links" value={String(a.count)} sub={`${humanSize(a.bytes)} encrypted`} />
         <Stat label="Created — all time" value={String(l.created_total)} sub={`${humanSize(l.bytes_created_total)} total`} />
@@ -192,94 +221,115 @@ export function AdminPage() {
         <Stat label="Expired" value={String(l.expired_total)} sub="removed after TTL" />
       </div>
 
-      <div className="stat-block">
-        <span className="eyebrow">Created — last 14 days</span>
-        <div className="chart">
-          {series.map((p) => (
-            <div className="chart-col" key={p.day} title={`${p.count} on ${p.day}`}>
-              <div className="chart-bar-wrap">
-                <div
-                  className="chart-bar"
-                  style={{ height: `${(p.count / maxDay) * 100}%` }}
-                />
+      <Card>
+        <CardHeader>
+          <CardTitle>Created — last 14 days</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-24 items-end gap-1.5">
+            {series.map((p) => (
+              <div
+                className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+                key={p.day}
+                title={`${p.count} on ${p.day}`}
+              >
+                <div className="flex h-[74px] w-full items-end">
+                  <div
+                    className="w-full rounded-t-sm bg-primary"
+                    style={{ height: `${(p.count / maxDay) * 100}%`, minHeight: 2 }}
+                  />
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground">{p.label}</span>
               </div>
-              <span className="chart-label">{p.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="stat-block">
-        <span className="eyebrow">By type — all time</span>
-        <div className="bars">
+      <Card>
+        <CardHeader>
+          <CardTitle>By type — all time</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
           {kinds.map(([key, label]) => {
             const created = l.by_kind[key] ?? 0;
             const activeCount = a.by_kind[key] ?? 0;
             const max = Math.max(1, l.created_total);
             return (
-              <div className="bar-row" key={key}>
-                <span className="bar-label">{label}</span>
-                <div className="bar-track">
-                  <div className="bar-fill" style={{ width: `${(created / max) * 100}%` }} />
-                </div>
-                <span className="bar-val">
-                  {created} <span className="muted">· {activeCount} active</span>
+              <div className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3" key={key}>
+                <span className="text-sm text-muted-foreground">{label}</span>
+                <Progress value={(created / max) * 100} />
+                <span className="font-mono text-xs">
+                  {created}{" "}
+                  <span className="text-muted-foreground">· {activeCount} active</span>
                 </span>
               </div>
             );
           })}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="stat-block">
-        <span className="eyebrow">
-          Active links — {active.total}
-          {active.total > active.items.length ? ` (showing ${active.items.length})` : ""}
-        </span>
-        {active.items.length === 0 ? (
-          <p className="muted small">No active links.</p>
-        ) : (
-          <div className="active-table">
-            <div className="active-row active-head">
-              <span>Type</span>
-              <span>Size</span>
-              <span>Created</span>
-              <span>Expires in</span>
-              <span>Opens</span>
-            </div>
-            {active.items.map((it) => (
-              <div className="active-row" key={it.id}>
-                <span className="active-kind">{it.kind}</span>
-                <span>{humanSize(it.size)}</span>
-                <span className="muted">{agoLabel(it.created_at)}</span>
-                <span className={formatTtl(it.expires_at) === "expired" ? "ttl-exp" : "ttl"}>
-                  {formatTtl(it.expires_at)}
-                </span>
-                <span className="muted">
-                  {it.views}
-                  {it.max_views !== null ? ` / ${it.max_views}` : ""}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Active links — {active.total}
+            {active.total > active.items.length ? ` (showing ${active.items.length})` : ""}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {active.items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No active links.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Size</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Expires in</TableHead>
+                  <TableHead>Opens</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {active.items.map((it) => (
+                  <TableRow key={it.id}>
+                    <TableCell className="font-medium">{it.kind}</TableCell>
+                    <TableCell>{humanSize(it.size)}</TableCell>
+                    <TableCell className="text-muted-foreground">{agoLabel(it.created_at)}</TableCell>
+                    <TableCell
+                      className={formatTtl(it.expires_at) === "expired" ? "text-destructive" : undefined}
+                    >
+                      {formatTtl(it.expires_at)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {it.views}
+                      {it.max_views !== null ? ` / ${it.max_views}` : ""}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="actions">
-        <a className="btn ghost" href="#/">
-          Back to app
-        </a>
-      </div>
+      <Button variant="ghost" asChild>
+        <a href="#/">Back to app</a>
+      </Button>
     </div>
   );
 }
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="stat-card">
-      <span className="stat-label">{label}</span>
-      <span className="stat-value">{value}</span>
-      {sub && <span className="stat-sub">{sub}</span>}
-    </div>
+    <Card size="sm">
+      <CardHeader>
+        <CardDescription>{label}</CardDescription>
+        <CardTitle className="font-heading text-2xl font-semibold tracking-tight">
+          {value}
+        </CardTitle>
+        {sub && <CardDescription>{sub}</CardDescription>}
+      </CardHeader>
+    </Card>
   );
 }
