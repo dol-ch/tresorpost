@@ -153,7 +153,7 @@
 }
 
 .editor-host .ProseMirror {
-  @apply min-h-[150px] px-3 py-2.5 text-sm outline-none;
+  @apply min-h-[140px] p-3.5 text-[15px] leading-relaxed outline-none;
 }
 .editor-host .ProseMirror p {
   @apply my-1.5;

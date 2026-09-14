@@ -227,7 +227,7 @@ export function CreatePage() {
               <img
                 src={qr}
                 alt="QR code for the encrypted link"
-                className="size-[150px] rounded-2xl bg-muted p-2.5"
+                className="size-[150px] rounded-[16px] bg-muted p-2.5"
               />
               <p className="-mt-1.5 text-[12.5px] font-semibold tracking-[0.03em] text-muted-foreground uppercase">
                 Scan to open
@@ -353,7 +353,7 @@ export function CreatePage() {
           />
         </div>
 
-        <div className="flex flex-col gap-4 rounded-2xl bg-muted p-4">
+        <div className="flex flex-col gap-4 rounded-[14px] bg-muted p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[15px] font-medium">Limit number of opens</div>
             <Switch checked={limitViews} onCheckedChange={setLimitViews} />

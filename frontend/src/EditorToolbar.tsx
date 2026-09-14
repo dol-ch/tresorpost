@@ -279,7 +279,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
               size="icon-xs"
               variant="ghost"
               className={cn(
-                "size-8 rounded-lg text-muted-foreground hover:bg-border hover:text-foreground",
+                "size-8 rounded-[8px] text-muted-foreground hover:bg-border hover:text-foreground",
                 it.active && "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,.08)]",
               )}
               title={it.title}

@@ -78,7 +78,7 @@ export function App() {
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
-      <div className="mx-auto w-full max-w-[640px] px-5 pt-7 pb-18 sm:px-5">
+      <div className="mx-auto w-full max-w-[720px] px-5 pt-7 pb-18 sm:px-5">
         <nav className="mb-7 flex flex-wrap items-center gap-1.5">
           <a
             className="mr-auto inline-flex min-w-0 items-center gap-2 whitespace-nowrap"

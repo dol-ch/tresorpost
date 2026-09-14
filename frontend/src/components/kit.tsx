@@ -52,7 +52,7 @@ export function EmptyState({
     <div className="flex flex-col items-center gap-3.5 px-6 py-8 text-center">
       <div
         className={cn(
-          "flex size-14 items-center justify-center rounded-2xl",
+          "flex size-14 items-center justify-center rounded-[16px]",
           tone === "primary"
             ? "bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-primary"
             : "bg-muted text-muted-foreground",
@@ -80,7 +80,7 @@ export function SelfDestructCard({
   expiry: { absolute: string; relative: string };
 }) {
   return (
-    <div className="flex flex-col gap-2.5 rounded-2xl bg-muted p-4">
+    <div className="flex flex-col gap-2.5 rounded-[14px] bg-muted p-4">
       <Kicker>Self-destructs</Kicker>
       <div className="flex flex-col gap-1.5 text-[14.5px]">
         {opensLine && (

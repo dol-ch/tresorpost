@@ -37,11 +37,11 @@ export function FileDropzone({
         take(e.dataTransfer.files);
       }}
       className={cn(
-        "flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-2.5 rounded-2xl border-[1.5px] border-dashed px-5 py-10 text-center transition-colors",
+        "flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-2.5 rounded-[14px] border-[1.5px] border-dashed px-5 py-10 text-center transition-colors",
         drag ? "border-primary bg-border" : "border-border bg-muted hover:bg-border",
       )}
     >
-      <div className="flex size-11 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--primary)_12%,transparent)]">
+      <div className="flex size-11 items-center justify-center rounded-[12px] bg-[color-mix(in_srgb,var(--primary)_12%,transparent)]">
         <Upload className="size-5 text-primary" strokeWidth={1.8} />
       </div>
       <span className="max-w-full truncate text-[14.5px] font-medium text-muted-foreground">

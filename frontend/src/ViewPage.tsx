@@ -337,7 +337,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
           <div className="space-y-2 text-center">
             <img
               alt={payload.filename ?? "image"}
-              className="mx-auto max-w-full rounded-2xl"
+              className="mx-auto max-w-full rounded-[14px]"
               src={URL.createObjectURL(base64ToBlob(payload.data, payload.mime ?? "image/*"))}
             />
             <p className="text-sm text-muted-foreground">{payload.filename}</p>
@@ -472,8 +472,8 @@ function S3FileView({
         <DecryptedLocallyBadge />
         <SelfDestructCard opensLine={opensLine} expiry={expiry} />
 
-        <div className="flex items-center gap-3.5 rounded-2xl bg-muted p-4">
-          <div className="flex size-[46px] flex-none items-center justify-center rounded-xl bg-card">
+        <div className="flex items-center gap-3.5 rounded-[14px] bg-muted p-4">
+          <div className="flex size-[46px] flex-none items-center justify-center rounded-[12px] bg-card">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
               <path d="M14 2v6h6" />
@@ -602,7 +602,7 @@ function ImagePreview({ blob, filename }: { blob: Blob; filename?: string }) {
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   return (
     <div className="flex flex-col items-center gap-3">
-      <img alt={filename ?? "image"} className="max-w-full rounded-2xl" src={url} />
+      <img alt={filename ?? "image"} className="max-w-full rounded-[14px]" src={url} />
       <Button asChild>
         <a href={url} download={filename ?? "image"}>
           Download image
@@ -620,7 +620,7 @@ function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
     <div className="flex flex-col items-center gap-3">
       {!failed ? (
         <video
-          className="max-h-[min(70vh,720px)] w-full rounded-2xl bg-black"
+          className="max-h-[min(70vh,720px)] w-full rounded-[14px] bg-black"
           controls
           playsInline
           preload="metadata"
@@ -646,8 +646,8 @@ function FileDownload({ payload }: { payload: SecretPayload }) {
   const blob = base64ToBlob(payload.data, payload.mime ?? "application/octet-stream");
   const url = URL.createObjectURL(blob);
   return (
-    <div className="flex items-center gap-3.5 rounded-2xl bg-muted p-4">
-      <div className="flex size-[46px] flex-none items-center justify-center rounded-xl bg-card">
+    <div className="flex items-center gap-3.5 rounded-[14px] bg-muted p-4">
+      <div className="flex size-[46px] flex-none items-center justify-center rounded-[12px] bg-card">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
           <path d="M14 2v6h6" />

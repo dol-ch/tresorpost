@@ -23,7 +23,7 @@ export function Segmented<T extends string | number>({
       role="group"
       aria-label={ariaLabel}
       className={cn(
-        "flex gap-0.5 rounded-xl bg-muted p-[3px]",
+        "flex gap-0.5 rounded-[12px] bg-muted p-[3px]",
         className,
       )}
     >
