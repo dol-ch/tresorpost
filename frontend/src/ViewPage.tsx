@@ -360,7 +360,10 @@ function S3FileView({
   const expiry = formatExpiry(expiresAt);
   const isVideo =
     header.kind === "video" || (header.mime || "").startsWith("video/");
-  const canPlayInBrowser = isVideo && header.size <= FALLBACK_MAX_BYTES;
+  const isImage =
+    header.kind === "image" || (header.mime || "").startsWith("image/");
+  const canPreviewInBrowser =
+    (isVideo || isImage) && header.size <= FALLBACK_MAX_BYTES;
   const opensLimited = viewsRemaining !== null;
   let opensLine: string | null = null;
   if (opensLimited) {
@@ -397,11 +400,11 @@ function S3FileView({
     if (header.size > FALLBACK_MAX_BYTES) {
       setPhase("error");
       setMessage(
-        `This video is ${humanSize(header.size)} — too large to play in the browser. Download it instead.`,
+        `This file is ${humanSize(header.size)} — too large to open in the browser. Download it instead.`,
       );
       return;
     }
-    const sink = collectingSink(header.mime || "video/mp4");
+    const sink = collectingSink(header.mime || (isImage ? "image/*" : "video/mp4"));
     await runDecrypt(sink, true);
     setPlayBlob(sink.result());
   }
@@ -458,7 +461,8 @@ function S3FileView({
       <div className="media center">
         <p className="file-name">{header.filename || "download"}</p>
         <p className="muted small">{humanSize(header.size)}</p>
-        {playBlob && <VideoPlayer blob={playBlob} filename={header.filename} />}
+        {playBlob && isVideo && <VideoPlayer blob={playBlob} filename={header.filename} />}
+        {playBlob && isImage && <ImagePreview blob={playBlob} filename={header.filename} />}
         {progress && (
           <div className="progress" role="status" aria-live="polite">
             <div className="progress-bar">
@@ -485,16 +489,16 @@ function S3FileView({
         {message && <p className="error">{message}</p>}
         {phase !== "downloading" && !playBlob && (
           <div className="media-actions">
-            {canPlayInBrowser && (
+            {canPreviewInBrowser && (
               <button className="btn primary fit" onClick={onPlay}>
-                Decrypt &amp; play
+                {isImage ? "Decrypt & view" : "Decrypt & play"}
               </button>
             )}
             <button
-              className={canPlayInBrowser ? "btn ghost" : "btn primary fit"}
+              className={canPreviewInBrowser ? "btn ghost" : "btn primary fit"}
               onClick={onDownload}
             >
-              {isVideo ? "Download video" : "Download & decrypt"}
+              {isVideo ? "Download video" : isImage ? "Download image" : "Download & decrypt"}
             </button>
           </div>
         )}
@@ -555,6 +559,21 @@ function RecipientDestroy({
       </button>
       {error && <p className="error">{error}</p>}
     </>
+  );
+}
+
+function ImagePreview({ blob, filename }: { blob: Blob; filename?: string }) {
+  const url = useMemo(() => URL.createObjectURL(blob), [blob]);
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  return (
+    <div className="video-block">
+      <img alt={filename ?? "image"} src={url} />
+      <div className="media-actions">
+        <a className="btn primary fit" href={url} download={filename ?? "image"}>
+          Download image
+        </a>
+      </div>
+    </div>
   );
 }
 

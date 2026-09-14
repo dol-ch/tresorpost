@@ -69,10 +69,15 @@ export function CreatePage() {
       });
   }, []);
 
-  const useS3 = s3Enabled && (kind === "file" || kind === "video");
-  const effectiveMax = useS3 ? maxS3FileBytes : maxFileBytes;
+  const useS3 =
+    s3Enabled &&
+    (kind === "file" ||
+      kind === "video" ||
+      (kind === "image" && file !== null && file.size > maxFileBytes));
+  const effectiveMax = s3Enabled && kind !== "text" ? maxS3FileBytes : maxFileBytes;
   const maxLabel = humanSize(effectiveMax);
   const fileMaxLabel = humanSize(s3Enabled ? maxS3FileBytes : maxFileBytes);
+  const fileTooBig = !!file && file.size > effectiveMax;
 
   useEffect(() => {
     if (!shareUrl) {
@@ -133,7 +138,7 @@ export function CreatePage() {
         setProgress({ done: 0, total: file.size });
         const res = await uploadLargeFile({
           file,
-          kind: kind === "video" ? "video" : "file",
+          kind: kind === "video" ? "video" : kind === "image" ? "image" : "file",
           expiresIn,
           maxViews: maxViewsVal,
           allowDelete,
@@ -176,7 +181,12 @@ export function CreatePage() {
           : null,
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      const failed =
+        /failed to fetch|networkerror|load failed/i.test(msg)
+          ? "Could not reach the server. If this is a large image, the reverse proxy may be rejecting the body — configure S3 or raise client_max_body_size."
+          : msg;
+      setError(failed);
     } finally {
       abortRef.current = null;
       setProgress(null);
@@ -248,14 +258,16 @@ export function CreatePage() {
             </div>
           )}
           <div className="share-controls">
+            <label htmlFor="share-url">Share link</label>
             <div className="share-row">
               <input
+                id="share-url"
                 className="share-input"
                 readOnly
                 value={shareUrl}
                 onFocus={(e) => e.target.select()}
               />
-              <button className="btn" onClick={copy}>
+              <button className="btn" type="button" onClick={copy}>
                 {copied ? "Copied!" : "Copy"}
               </button>
             </div>
@@ -338,6 +350,12 @@ export function CreatePage() {
           {file && (
             <p className="muted small">
               {file.name} — {humanSize(file.size)}
+            </p>
+          )}
+          {kind === "image" && !s3Enabled && (
+            <p className="muted small">
+              Without S3, images are limited to {humanSize(maxFileBytes)}. Phone
+              photos are often larger — set S3_* in .env.
             </p>
           )}
         </div>
@@ -429,7 +447,11 @@ export function CreatePage() {
       )}
 
       <div className="submit-row">
-        <button className="btn primary" onClick={onCreate} disabled={busy}>
+        <button
+          className="btn primary"
+          onClick={onCreate}
+          disabled={busy || fileTooBig || (kind !== "text" && !file)}
+        >
           {busy ? (useS3 ? "Uploading…" : "Encrypting…") : "Create encrypted link"}
         </button>
         {busy && useS3 && (
