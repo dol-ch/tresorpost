@@ -79,7 +79,7 @@ export const RichTextEditor = forwardRef<EditorHandle>((_props, ref) => {
   }));
 
   return (
-    <div className="overflow-hidden rounded-lg border border-input bg-background">
+    <div className="overflow-hidden rounded-[14px] border border-border bg-card">
       {view && <EditorToolbar view={view} />}
       <div className="editor-host" ref={hostRef} />
     </div>

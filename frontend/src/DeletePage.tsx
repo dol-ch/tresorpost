@@ -2,14 +2,8 @@ import { useState } from "react";
 import { deleteSecret } from "./api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/kit";
 
 export function DeletePage({ id, token }: { id: string; token: string }) {
   const [busy, setBusy] = useState(false);
@@ -32,46 +26,47 @@ export function DeletePage({ id, token }: { id: string; token: string }) {
   if (done) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>This note is gone</CardTitle>
-          <CardDescription>
-            Ciphertext has been removed from the server. Anyone with the share
-            link will see that it is no longer available.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button asChild>
-            <a href="#/">Create another</a>
-          </Button>
-        </CardFooter>
+        <CardContent>
+          <EmptyState
+            tone="primary"
+            icon={
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            }
+            title="Note destroyed"
+            description="Ciphertext has been removed from the server. Anyone with the share link will see that it is no longer available."
+            cta={{ label: "Create another", href: "#/" }}
+          />
+        </CardContent>
       </Card>
     );
   }
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Destroy this note now?</CardTitle>
-        <CardDescription>
-          This cannot be undone. Recipients will no longer be able to open the
-          share link.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-4">
+        <div>
+          <h2 className="mb-1.5 font-heading text-xl font-bold tracking-tight">
+            Destroy this note now?
+          </h2>
+          <p className="text-[14.5px] text-muted-foreground">
+            This cannot be undone. Recipients will no longer be able to open the
+            share link.
+          </p>
+        </div>
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-      </CardContent>
-      <CardFooter className="gap-2">
-        <Button variant="destructive" onClick={onConfirm} disabled={busy}>
+        <Button variant="secondary" className="text-destructive" onClick={onConfirm} disabled={busy}>
           {busy ? "Deleting…" : "Yes, delete it"}
         </Button>
-        <Button variant="outline" asChild>
+        <Button variant="secondary" asChild>
           <a href="#/">Cancel</a>
         </Button>
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 }

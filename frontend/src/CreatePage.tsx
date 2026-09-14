@@ -20,42 +20,29 @@ import { copyText } from "./clipboard";
 import { FileDropzone } from "@/components/file-dropzone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Segmented } from "@/components/ui/segmented";
+import { Switch } from "@/components/ui/switch";
+import { Kicker, StepKicker } from "@/components/kit";
 
 function progressPct(done: number, total: number) {
   if (!total) return 0;
   return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
 }
 
+const TYPE_OPTIONS: { value: SecretKind; label: string }[] = [
+  { value: "text", label: "Text" },
+  { value: "image", label: "Image" },
+  { value: "video", label: "Video" },
+  { value: "file", label: "File" },
+];
+
 export function CreatePage() {
   const [kind, setKind] = useState<SecretKind>("text");
   const [file, setFile] = useState<File | null>(null);
-  const [expiresIn, setExpiresIn] = useState<number>(EXPIRY_OPTIONS[4].seconds);
+  const [expiresIn, setExpiresIn] = useState<number>(EXPIRY_OPTIONS[1].seconds);
   const [limitViews, setLimitViews] = useState(false);
   const [maxViews, setMaxViews] = useState<number>(1);
   const [busy, setBusy] = useState(false);
@@ -223,83 +210,84 @@ export function CreatePage() {
   if (shareUrl) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Your encrypted link is ready</CardTitle>
-          <CardDescription>
-            Send it any way you like — or let them scan the code. The quantum-safe
-            256-bit key lives only after the <code className="font-mono text-xs">#</code> and
-            never reaches the server.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-col gap-4.5">
+          <StepKicker num="02">Share</StepKicker>
+          <h2 className="-mt-1 font-heading text-2xl font-bold tracking-tight">
+            Your encrypted link is ready
+          </h2>
+          <p className="-mt-2 text-[14.5px] text-muted-foreground">
+            Send it any way you like — or let them scan the code. The
+            quantum-safe 256-bit key lives only after the{" "}
+            <code className="font-mono text-xs">#</code> and never reaches the
+            server.
+          </p>
+
           {qr && (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 py-1">
               <img
                 src={qr}
                 alt="QR code for the encrypted link"
-                className="size-36 rounded-md border bg-white p-2"
+                className="size-[150px] rounded-2xl bg-muted p-2.5"
               />
-              <p className="text-xs text-muted-foreground">Scan to open</p>
+              <p className="-mt-1.5 text-[12.5px] font-semibold tracking-[0.03em] text-muted-foreground uppercase">
+                Scan to open
+              </p>
             </div>
           )}
-          <p className="break-all rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed select-all">
-            {shareUrl}
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button type="button" onClick={async () => {
+
+          <Input readOnly value={shareUrl} className="font-mono text-[13px]" />
+          <Button
+            type="button"
+            onClick={async () => {
               if (await copyText(shareUrl)) {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }
-            }}>
-              {copied ? "Copied!" : "Copy link"}
-            </Button>
-            <Button variant="outline" asChild>
-              <a href={shareUrl} target="_blank" rel="noreferrer">
-                Open link
-              </a>
-            </Button>
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={() => {
-                reset();
-                setFile(null);
-              }}
-            >
-              Create another
-            </Button>
-          </div>
+            }}
+          >
+            {copied ? "Copied" : "Copy link"}
+          </Button>
+          <Button variant="secondary" asChild>
+            <a href={shareUrl} target="_blank" rel="noreferrer">
+              Open link
+            </a>
+          </Button>
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={() => {
+              reset();
+              setFile(null);
+            }}
+          >
+            Create another
+          </Button>
+
           {deleteUrl && (
-            <div className="space-y-3 border-t pt-4">
-              <div>
-                <p className="text-sm font-medium">Keep this to delete the note</p>
-                <p className="text-sm text-muted-foreground">
-                  Do not send this with the share link. Anyone with it can destroy
-                  the note before it is opened.
-                </p>
-              </div>
-              <p className="break-all rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed select-all">
-                {deleteUrl}
+            <>
+              <div className="mt-1 h-px bg-border" />
+              <Kicker>Keep this to delete the note</Kicker>
+              <p className="-mt-3 text-[13.5px] text-muted-foreground">
+                Do not send this with the share link — anyone holding it can
+                destroy the note before it is opened.
               </p>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={async () => {
-                    if (await copyText(deleteUrl)) {
-                      setCopiedDelete(true);
-                      setTimeout(() => setCopiedDelete(false), 1500);
-                    }
-                  }}
-                >
-                  {copiedDelete ? "Copied!" : "Copy delete link"}
-                </Button>
-                <Button variant="outline" asChild>
-                  <a href={deleteUrl}>Delete this note</a>
-                </Button>
-              </div>
-            </div>
+              <Input readOnly value={deleteUrl} className="font-mono text-[13px]" />
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={async () => {
+                  if (await copyText(deleteUrl)) {
+                    setCopiedDelete(true);
+                    setTimeout(() => setCopiedDelete(false), 1500);
+                  }
+                }}
+              >
+                {copiedDelete ? "Copied" : "Copy delete link"}
+              </Button>
+              <Button variant="secondary" className="text-destructive" asChild>
+                <a href={deleteUrl}>Delete this note</a>
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
@@ -308,166 +296,146 @@ export function CreatePage() {
 
   return (
     <Card>
-      <CardContent>
-        <FieldGroup>
-          <Field>
-            <FieldLabel>Type</FieldLabel>
-            <Select
-              value={kind}
-              onValueChange={(v) => {
-                setKind(v as SecretKind);
-                setFile(null);
-                setError(null);
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                <SelectItem value="text">Text</SelectItem>
-                <SelectItem value="image">Image</SelectItem>
-                <SelectItem value="video">Video (max {fileMaxLabel})</SelectItem>
-                <SelectItem value="file">File (max {fileMaxLabel})</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
+      <CardContent className="flex flex-col gap-[22px]">
+        <div>
+          <Kicker className="mb-2">Type</Kicker>
+          <Segmented
+            aria-label="Secret type"
+            value={kind}
+            onChange={(v) => {
+              setKind(v);
+              setFile(null);
+              setError(null);
+            }}
+            options={TYPE_OPTIONS}
+          />
+        </div>
 
-          {kind === "text" ? (
-            <Field>
-              <FieldLabel>Message</FieldLabel>
-              <RichTextEditor ref={editorRef} />
-            </Field>
-          ) : (
-            <Field>
-              <FieldLabel>
-                {kind === "image" ? "Image" : kind === "video" ? "Video" : "File"}{" "}
-                (max {maxLabel})
-              </FieldLabel>
-              <FileDropzone
-                label={file ? `${humanSize(file.size)}` : "Choose a file"}
-                file={file}
-                accept={
-                  kind === "image"
-                    ? "image/*"
-                    : kind === "video"
-                      ? "video/*,.mov,.avi,.mkv,.webm,.mp4,.m4v,.ogv,.3gp"
-                      : undefined
-                }
-                onFile={onFile}
-              />
-              {kind === "image" && !s3Enabled && (
-                <FieldDescription>
-                  Without S3, images are limited to {humanSize(maxFileBytes)}. Phone
-                  photos are often larger — set S3_* in .env.
-                </FieldDescription>
-              )}
-            </Field>
-          )}
-
-          <Field>
-            <FieldLabel>Self-destruct after</FieldLabel>
-            <Select
-              value={String(expiresIn)}
-              onValueChange={(v) => setExpiresIn(Number(v))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                {EXPIRY_OPTIONS.map((o) => (
-                  <SelectItem key={o.seconds} value={String(o.seconds)}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <FieldSeparator />
-
-          <Field orientation="horizontal">
-            <Checkbox
-              id="limit-views"
-              checked={limitViews}
-              onCheckedChange={(v) => setLimitViews(v === true)}
+        {kind === "text" ? (
+          <div>
+            <Kicker className="mb-2">Message</Kicker>
+            <RichTextEditor ref={editorRef} />
+          </div>
+        ) : (
+          <div>
+            <Kicker className="mb-2">
+              {kind === "image" ? "Image" : kind === "video" ? "Video" : "File"} (max{" "}
+              {maxLabel})
+            </Kicker>
+            <FileDropzone
+              label={`Drop ${kind === "image" ? "an image" : kind === "video" ? "a video" : "a file"} here, or click to browse`}
+              file={file}
+              accept={
+                kind === "image"
+                  ? "image/*"
+                  : kind === "video"
+                    ? "video/*,.mov,.avi,.mkv,.webm,.mp4,.m4v,.ogv,.3gp"
+                    : undefined
+              }
+              onFile={onFile}
             />
-            <FieldContent>
-              <FieldLabel htmlFor="limit-views">Limit number of opens</FieldLabel>
-              {limitViews && (
-                <Input
-                  className="mt-2 max-w-24"
-                  type="number"
-                  min={1}
-                  value={maxViews}
-                  onChange={(e) => setMaxViews(Math.max(1, Number(e.target.value) || 1))}
-                />
-              )}
-            </FieldContent>
-          </Field>
-
-          <Field orientation="horizontal">
-            <Checkbox
-              id="allow-delete"
-              checked={allowDelete}
-              onCheckedChange={(v) => setAllowDelete(v === true)}
-            />
-            <FieldContent>
-              <FieldLabel htmlFor="allow-delete">Let me delete this note later</FieldLabel>
-              <FieldDescription>
-                You get a private delete link. It is not part of the share URL.
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          <Field orientation="horizontal">
-            <Checkbox
-              id="recipient-delete"
-              checked={allowRecipientDelete}
-              onCheckedChange={(v) => setAllowRecipientDelete(v === true)}
-            />
-            <FieldContent>
-              <FieldLabel htmlFor="recipient-delete">
-                Recipient can permanently delete
-              </FieldLabel>
-              <FieldDescription>
-                Puts a destroy button on the open page. Anyone with the share link
-                can wipe the ciphertext from the server.
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertTitle>Could not create the link</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {progress && (
-            <div className="space-y-2" role="status" aria-live="polite">
-              <Progress value={progressPct(progress.done, progress.total)} />
-              <p className="text-center text-xs text-muted-foreground">
-                Encrypting &amp; uploading: {humanSize(Math.max(0, progress.done))} /{" "}
-                {humanSize(progress.total)} ({progressPct(progress.done, progress.total)}%)
+            {kind === "image" && !s3Enabled && (
+              <p className="mt-2 text-[13px] text-muted-foreground">
+                Without S3, images are limited to {humanSize(maxFileBytes)}. Phone
+                photos are often larger — set S3_* in .env.
               </p>
-            </div>
+            )}
+          </div>
+        )}
+
+        <div>
+          <Kicker className="mb-2">Self-destruct after</Kicker>
+          <Segmented
+            aria-label="Self-destruct after"
+            value={expiresIn}
+            onChange={setExpiresIn}
+            options={EXPIRY_OPTIONS.map((o) => ({ value: o.seconds, label: o.label }))}
+          />
+        </div>
+
+        <div className="flex flex-col gap-4 rounded-2xl bg-muted p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[15px] font-medium">Limit number of opens</div>
+            <Switch checked={limitViews} onCheckedChange={setLimitViews} />
+          </div>
+          {limitViews && (
+            <Input
+              type="number"
+              min={1}
+              className="max-w-25"
+              value={maxViews}
+              onChange={(e) => setMaxViews(Math.max(1, Number(e.target.value) || 1))}
+            />
           )}
-        </FieldGroup>
-      </CardContent>
-      <CardFooter className="flex-col gap-2 sm:flex-col">
+
+          <div className="h-px bg-border" />
+
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[15px] font-medium">Let me delete this note later</div>
+              <div className="mt-0.5 text-[13px] text-muted-foreground">
+                A private delete link — not part of the share URL.
+              </div>
+            </div>
+            <Switch checked={allowDelete} onCheckedChange={setAllowDelete} />
+          </div>
+
+          <div className="h-px bg-border" />
+
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[15px] font-medium">Recipient can permanently delete</div>
+              <div className="mt-0.5 text-[13px] text-muted-foreground">
+                Adds a destroy button on the open page.
+              </div>
+            </div>
+            <Switch checked={allowRecipientDelete} onCheckedChange={setAllowRecipientDelete} />
+          </div>
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Could not create the link</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {progress && (
+          <div className="space-y-2" role="status" aria-live="polite">
+            <Progress value={progressPct(progress.done, progress.total)} />
+            <p className="text-center text-xs text-muted-foreground">
+              Encrypting &amp; uploading: {humanSize(Math.max(0, progress.done))} /{" "}
+              {humanSize(progress.total)} ({progressPct(progress.done, progress.total)}%)
+            </p>
+          </div>
+        )}
+
         <Button
-          className="w-full"
           onClick={onCreate}
           disabled={busy || fileTooBig || (kind !== "text" && !file)}
         >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
           {busy ? (useS3 ? "Uploading…" : "Encrypting…") : "Create encrypted link"}
         </Button>
         {busy && useS3 && (
-          <Button variant="outline" className="w-full" onClick={() => abortRef.current?.abort()}>
+          <Button variant="secondary" onClick={() => abortRef.current?.abort()}>
             Cancel
           </Button>
         )}
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 }

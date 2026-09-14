@@ -219,8 +219,9 @@ pub(crate) fn build_content_security_policy(s3_endpoint: Option<&str>) -> String
     };
     format!(
         "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
-         img-src 'self' blob: data:; media-src 'self' blob:; connect-src {connect}; \
-         base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+         font-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; \
+         connect-src {connect}; base-uri 'none'; form-action 'self'; \
+         frame-ancestors 'none'"
     )
 }
 
@@ -274,6 +275,7 @@ mod security_header_tests {
         let csp = build_content_security_policy(None);
         assert!(csp.contains("script-src 'self'"));
         assert!(csp.contains("style-src 'self' 'unsafe-inline'"));
+        assert!(csp.contains("font-src 'self'"));
         assert!(csp.contains("img-src 'self' blob: data:"));
         assert!(csp.contains("media-src 'self' blob:"));
         assert!(csp.contains("connect-src 'self'"));
