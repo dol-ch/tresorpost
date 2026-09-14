@@ -98,6 +98,7 @@ async fn main() {
         .unwrap_or(DEFAULT_PENDING_UPLOAD_TTL_SECS);
     tracing::info!("pending upload TTL: {pending_upload_ttl_secs}s");
 
+    tracing::info!("sqlite database: {db_path}");
     let pool = db::init_db(&db_path).await;
     tokio::spawn(db::cleanup_loop(
         pool.clone(),
