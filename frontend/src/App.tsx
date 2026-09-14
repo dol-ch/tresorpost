@@ -86,8 +86,8 @@ export function App() {
                 <Badge variant="outline">Zero-knowledge server</Badge>
               </div>
             </section>
-            <HomepageStats />
             <CreatePage />
+            <HomepageStats />
           </>
         )}
         {route.name === "view" && (
