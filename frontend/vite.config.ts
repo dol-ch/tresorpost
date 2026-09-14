@@ -1,10 +1,29 @@
+import fs from "node:fs";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
+
+/** If a private overlay ships its own tab icons, copy them into dist. The
+ *  committed default is always the Tresorpost padlock in public/. */
+function privateFaviconOverride(): Plugin {
+  const files = ["favicon.svg", "favicon.ico", "apple-touch-icon.png"];
+  return {
+    name: "private-favicon-override",
+    writeBundle(options) {
+      const dir = options.dir ?? path.resolve(__dirname, "dist");
+      for (const name of files) {
+        const src = path.resolve(__dirname, "src/brand/private", name);
+        if (fs.existsSync(src)) {
+          fs.copyFileSync(src, path.join(dir, name));
+        }
+      }
+    },
+  };
+}
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), privateFaviconOverride()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
