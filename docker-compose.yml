@@ -1,6 +1,6 @@
 services:
   tresorpost:
-    image: ghcr.io/dol-ch/tresorpost:0.1.7
+    image: ghcr.io/dol-ch/tresorpost:0.1.8
     env_file: .env
     ports:
       - "127.0.0.1:3000:3000"
