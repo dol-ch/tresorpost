@@ -4,16 +4,20 @@ import { HomepageStats } from "./HomepageStats";
 import { ViewPage } from "./ViewPage";
 import { DeletePage } from "./DeletePage";
 import { AdminPage } from "./AdminPage";
+import { FaqPage } from "./FaqPage";
+import { PrivacyPage } from "./PrivacyPage";
 import { brand } from "./brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { StepKicker } from "@/components/kit";
+import { cn } from "@/lib/utils";
 
 type Route =
   | { name: "create" }
   | { name: "view"; id: string; key: string; recipientDeleteToken?: string }
   | { name: "delete"; id: string; token: string }
+  | { name: "faq" }
+  | { name: "privacy" }
   | { name: "admin" };
 
 function parseRoute(): Route {
@@ -21,6 +25,12 @@ function parseRoute(): Route {
   const parts = hash.split("/").filter(Boolean);
   if (parts[0] === "admin") {
     return { name: "admin" };
+  }
+  if (parts[0] === "faq") {
+    return { name: "faq" };
+  }
+  if (parts[0] === "privacy") {
+    return { name: "privacy" };
   }
   if (parts[0] === "d" && parts[1] && parts[2]) {
     return { name: "delete", id: parts[1], token: parts.slice(2).join("/") };
@@ -34,6 +44,20 @@ function parseRoute(): Route {
     };
   }
   return { name: "create" };
+}
+
+function NavLink({ href, active, children }: { href: string; active: boolean; children: string }) {
+  return (
+    <a
+      href={href}
+      className={cn(
+        "rounded-[9px] px-2.5 py-1.5 font-sans text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        active && "text-primary hover:text-primary",
+      )}
+    >
+      {children}
+    </a>
+  );
 }
 
 export function App() {
@@ -50,72 +74,89 @@ export function App() {
   }, []);
 
   const Wordmark = brand.Wordmark;
+  const sendActive = route.name === "create" || route.name === "view" || route.name === "delete";
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
-      <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-3xl items-center justify-between gap-4 px-4">
-          <a className="min-w-0" href="#/" aria-label={brand.name}>
+      <div className="mx-auto w-full max-w-[640px] px-5 pt-7 pb-18 sm:px-5">
+        <nav className="mb-7 flex flex-wrap items-center gap-1.5">
+          <a
+            className="mr-auto inline-flex min-w-0 items-center gap-2 whitespace-nowrap"
+            href="#/"
+            aria-label={brand.name}
+          >
             <Wordmark />
           </a>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              {brand.tagline}
-            </span>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+          <NavLink href="#/" active={sendActive}>
+            Send
+          </NavLink>
+          <NavLink href="#/faq" active={route.name === "faq"}>
+            How it works
+          </NavLink>
+          <NavLink href="#/privacy" active={route.name === "privacy"}>
+            Privacy
+          </NavLink>
+          <ThemeToggle />
+        </nav>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:py-10">
-        {route.name === "create" && (
-          <>
-            <section className="mb-8 space-y-4">
-              <Badge variant="secondary">Secure transfer</Badge>
-              <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                Share a secret only the recipient can read.
-              </h1>
-              <p className="max-w-2xl text-muted-foreground text-pretty">
-                Text, images, video and files are encrypted in your browser and
-                decrypted in theirs. The key lives only in the link — it never
-                reaches the server, which stores nothing but ciphertext.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">XChaCha20-Poly1305</Badge>
-                <Badge variant="outline">256-bit · quantum-safe</Badge>
-                <Badge variant="outline">Zero-knowledge server</Badge>
-              </div>
-            </section>
-            <CreatePage />
-            <HomepageStats />
-          </>
-        )}
-        {route.name === "view" && (
-          <ViewPage
-            id={route.id}
-            keyB64Url={route.key}
-            recipientDeleteToken={route.recipientDeleteToken}
-          />
-        )}
-        {route.name === "delete" && <DeletePage id={route.id} token={route.token} />}
-        {route.name === "admin" && <AdminPage />}
-      </main>
+        <main className="flex-1">
+          {route.name === "create" && (
+            <>
+              <section className="mb-7">
+                <StepKicker num="01">Secure transfer</StepKicker>
+                <h1 className="mb-3.5 font-heading text-[clamp(27px,7.6vw,40px)] leading-[1.1] font-extrabold tracking-tight text-balance">
+                  Share a secret only the recipient can read.
+                </h1>
+                <p className="mb-5 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
+                  Text, images, video and files are encrypted in your browser and
+                  decrypted in theirs. The key lives only in the link — it never
+                  reaches the server, which stores nothing but ciphertext.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">XChaCha20-Poly1305</Badge>
+                  <Badge variant="secondary">256-bit · quantum-safe</Badge>
+                  <Badge variant="secondary">Zero-knowledge server</Badge>
+                </div>
+              </section>
+              <CreatePage />
+              <HomepageStats />
+            </>
+          )}
+          {route.name === "view" && (
+            <ViewPage
+              id={route.id}
+              keyB64Url={route.key}
+              recipientDeleteToken={route.recipientDeleteToken}
+            />
+          )}
+          {route.name === "delete" && <DeletePage id={route.id} token={route.token} />}
+          {route.name === "faq" && <FaqPage />}
+          {route.name === "privacy" && <PrivacyPage />}
+          {route.name === "admin" && <AdminPage />}
+        </main>
 
-      <footer className="mt-auto">
-        <Separator />
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-muted-foreground">
-          <span>Zero-knowledge · keys stay in the URL fragment</span>
-          <span className="flex flex-wrap items-center gap-1">
-            {brand.footerLinks.map((l) => (
-              <Button key={l.href} variant="link" size="sm" className="h-auto px-1" asChild>
-                <a href={l.href} target="_blank" rel="noreferrer">
+        <footer className="mt-9 border-t border-border pt-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted-foreground">
+            <span>Zero-knowledge · keys stay in the URL fragment</span>
+            <span className="flex flex-wrap items-center gap-3">
+              {brand.footerLinks.map((l) => (
+                <a key={l.href} href={l.href} target="_blank" rel="noreferrer">
                   {l.label}
                 </a>
-              </Button>
-            ))}
-          </span>
-        </div>
-      </footer>
+              ))}
+            </span>
+          </div>
+          {brand.footerCredit && (
+            <div className="mt-2.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+              <span>{brand.footerCredit.text}</span>
+              {brand.footerCredit.flag && <brand.footerCredit.flag />}
+              <a href={brand.footerCredit.linkHref} target="_blank" rel="noreferrer">
+                {brand.footerCredit.linkLabel}
+              </a>
+            </div>
+          )}
+        </footer>
+      </div>
     </div>
   );
 }

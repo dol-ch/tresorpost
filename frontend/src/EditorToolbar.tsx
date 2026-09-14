@@ -1,9 +1,4 @@
 import type { ReactNode } from "react";
-import type { Command, EditorState } from "prosemirror-state";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import type { EditorView } from "prosemirror-view";
-import type { MarkType, NodeType } from "prosemirror-model";
 import { toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
 import { undo, redo } from "prosemirror-history";
 import type { MarkType, NodeType } from "prosemirror-model";
@@ -13,6 +8,7 @@ import type { EditorView } from "prosemirror-view";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 function markActive(state: EditorState, type: MarkType): boolean {
   const { from, $from, to, empty } = state.selection;
@@ -57,6 +53,7 @@ interface ToolbarItem {
   onRun: () => void;
 }
 
+// ── icons (feather-style, inherit currentColor) ────────────────────────────
 const I: Record<string, ReactNode> = {
   bold: (
     <path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z" />
@@ -268,20 +265,23 @@ export function EditorToolbar({ view }: { view: EditorView }) {
 
   return (
     <div
-      className="flex flex-wrap items-center gap-0.5 border-b bg-muted/40 p-1"
+      className="flex flex-wrap items-center gap-0.5 overflow-x-auto border-b border-border bg-muted px-2 py-1.5"
       role="toolbar"
       aria-label="Formatting"
     >
-    <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/40 p-1" role="toolbar" aria-label="Formatting">
       {groups.map((group, gi) => (
         <div className="flex items-center gap-0.5" key={gi}>
-          {gi > 0 && <Separator orientation="vertical" className="mx-1 h-5" />}
+          {gi > 0 && <Separator orientation="vertical" className="mx-1 h-4 bg-border" />}
           {group.map((it) => (
             <Button
               key={it.key}
               type="button"
-              size="icon-sm"
-              variant={it.active ? "secondary" : "ghost"}
+              size="icon-xs"
+              variant="ghost"
+              className={cn(
+                "size-8 rounded-lg text-muted-foreground hover:bg-border hover:text-foreground",
+                it.active && "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,.08)]",
+              )}
               title={it.title}
               aria-label={it.title}
               aria-pressed={it.active ? true : undefined}

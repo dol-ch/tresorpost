@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { humanSize } from "@/options";
 
 export function FileDropzone({
   accept,
@@ -36,16 +37,15 @@ export function FileDropzone({
         take(e.dataTransfer.files);
       }}
       className={cn(
-        "flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-8 text-center transition-colors",
-        drag
-          ? "border-ring bg-muted/60"
-          : "border-input bg-muted/20 hover:bg-muted/40",
+        "flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-2.5 rounded-2xl border-[1.5px] border-dashed px-5 py-10 text-center transition-colors",
+        drag ? "border-primary bg-border" : "border-border bg-muted hover:bg-border",
       )}
     >
-      <Upload className="size-5 text-muted-foreground" />
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-xs text-muted-foreground">
-        {file ? `${file.name}` : "Click or drop a file here"}
+      <div className="flex size-11 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--primary)_12%,transparent)]">
+        <Upload className="size-5 text-primary" strokeWidth={1.8} />
+      </div>
+      <span className="max-w-full truncate text-[14.5px] font-medium text-muted-foreground">
+        {file ? `${file.name} — ${humanSize(file.size)}` : label}
       </span>
       <input
         ref={inputRef}

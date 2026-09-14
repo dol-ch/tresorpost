@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchPublicStats, type PublicStats } from "./api";
 import { humanSize } from "./options";
-import { Separator } from "@/components/ui/separator";
+import { Kicker } from "@/components/kit";
 
 function formatCount(n: number): string {
   return Math.max(0, Math.round(n)).toLocaleString("en-US");
@@ -18,8 +18,8 @@ function Stat({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-0.5 font-heading text-lg font-medium tabular-nums tracking-tight">
+      <p className="text-[12.5px] text-muted-foreground">{label}</p>
+      <p className="mt-0.5 font-heading text-lg font-semibold tabular-nums tracking-tight">
         {value}
       </p>
       {hint ? (
@@ -48,11 +48,8 @@ export function HomepageStats() {
   const texts = stats.by_kind.text ?? 0;
 
   return (
-    <section className="mt-10" aria-label="All-time usage">
-      <Separator className="mb-5" />
-      <p className="mb-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        All-time usage
-      </p>
+    <section className="mt-9 border-t border-border pt-6" aria-label="All-time usage">
+      <Kicker className="mb-4">All-time usage</Kicker>
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
         <Stat
           label="Links created"
