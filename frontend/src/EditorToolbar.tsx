@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
+import { toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
+import { undo, redo } from "prosemirror-history";
+import type { MarkType, NodeType } from "prosemirror-model";
+import { wrapInList } from "prosemirror-schema-list";
 import type { Command, EditorState } from "prosemirror-state";
+import type { EditorView } from "prosemirror-view";
+
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import type { EditorView } from "prosemirror-view";
-import type { MarkType, NodeType } from "prosemirror-model";
-import { toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
-import { wrapInList } from "prosemirror-schema-list";
-import { undo, redo } from "prosemirror-history";
 
 function markActive(state: EditorState, type: MarkType): boolean {
   const { from, $from, to, empty } = state.selection;
@@ -42,7 +43,7 @@ function run(view: EditorView, cmd: Command) {
   view.focus();
 }
 
-interface Item {
+interface ToolbarItem {
   key: string;
   title: string;
   content: ReactNode;
@@ -51,8 +52,7 @@ interface Item {
   onRun: () => void;
 }
 
-// ── icons (feather-style, inherit currentColor) ────────────────────────────
-const I = {
+const I: Record<string, ReactNode> = {
   bold: (
     <path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z" />
   ),
@@ -169,7 +169,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
     title: string,
     type: MarkType,
     content: ReactNode,
-  ): Item => ({
+  ): ToolbarItem => ({
     key,
     title,
     content,
@@ -178,7 +178,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
     onRun: () => run(view, toggleMark(type)),
   });
 
-  const groups: Item[][] = [
+  const groups: ToolbarItem[][] = [
     [
       markBtn("bold", "Bold  (⌘/Ctrl+B)", strong, <Svg>{I.bold}</Svg>),
       markBtn("italic", "Italic  (⌘/Ctrl+I)", em, <Svg>{I.italic}</Svg>),
@@ -262,7 +262,11 @@ export function EditorToolbar({ view }: { view: EditorView }) {
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/40 p-1" role="toolbar" aria-label="Formatting">
+    <div
+      className="flex flex-wrap items-center gap-0.5 border-b bg-muted/40 p-1"
+      role="toolbar"
+      aria-label="Formatting"
+    >
       {groups.map((group, gi) => (
         <div className="flex items-center gap-0.5" key={gi}>
           {gi > 0 && <Separator orientation="vertical" className="mx-1 h-5" />}
