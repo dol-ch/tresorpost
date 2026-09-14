@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchPublicStats, type PublicStats } from "./api";
 import { humanSize } from "./options";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader } from "@/components/ui/card";
 
 function formatCount(n: number): string {
   return Math.max(0, Math.round(n)).toLocaleString("en-US");
@@ -22,12 +17,12 @@ function StatCard({
   hint?: string;
 }) {
   return (
-    <Card size="sm">
+    <Card>
       <CardHeader>
         <CardDescription>{label}</CardDescription>
-        <CardTitle className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
+        <p className="font-heading text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl">
           {value}
-        </CardTitle>
+        </p>
         {hint ? <CardDescription>{hint}</CardDescription> : null}
       </CardHeader>
     </Card>
