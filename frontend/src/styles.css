@@ -323,20 +323,12 @@ code {
   margin: 0 0 8px;
 }
 
-.share-block {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  margin-top: 18px;
-  width: 100%;
-}
-
 .qr {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  align-self: center;
+  margin: 20px 0 8px;
 }
 
 .qr img {
@@ -349,30 +341,25 @@ code {
   display: block;
 }
 
-.share-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  min-width: 0;
-}
-
-.share-row {
-  display: flex;
-  gap: 8px;
-  margin: 0 0 12px;
-  width: 100%;
-  min-width: 0;
-}
-
-.share-input {
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
+.share-url-plain {
+  display: block;
+  margin: 16px 0 12px;
+  padding: 14px 16px;
+  word-break: break-all;
   font-family: var(--font-mono);
-  font-size: 12.5px;
-  letter-spacing: 0.01em;
-  border: 1px solid var(--hair-strong);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  user-select: all;
+}
+
+.delete-keep {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hair);
 }
 
 /* ── View page ───────────────────────────────────────────────── */

@@ -250,66 +250,50 @@ export function CreatePage() {
           server.
         </p>
 
-        <div className="share-block">
-          {qr && (
-            <div className="qr">
-              <img src={qr} alt="QR code for the encrypted link" />
-              <span className="eyebrow">Scan to open</span>
-            </div>
-          )}
-          <div className="share-controls">
-            <label htmlFor="share-url">Share link</label>
-            <div className="share-row">
-              <input
-                id="share-url"
-                className="share-input"
-                readOnly
-                value={shareUrl}
-                onFocus={(e) => e.target.select()}
-              />
-              <button className="btn" type="button" onClick={copy}>
-                {copied ? "Copied!" : "Copy"}
-              </button>
-            </div>
-            <div className="actions">
-              <a className="btn ghost" href={shareUrl} target="_blank" rel="noreferrer">
-                Open link
-              </a>
-              <button
-                className="btn ghost"
-                onClick={() => {
-                  reset();
-                  setFile(null);
-                }}
-              >
-                Create another
-              </button>
-            </div>
-            {deleteUrl && (
-              <div className="delete-keep">
-                <p className="eyebrow">Keep this to delete the note</p>
-                <p className="muted small">
-                  Do not send this with the share link. Anyone with it can destroy
-                  the note before it is opened.
-                </p>
-                <div className="share-row">
-                  <input
-                    className="share-input"
-                    readOnly
-                    value={deleteUrl}
-                    onFocus={(e) => e.target.select()}
-                  />
-                  <button className="btn" onClick={copyDelete}>
-                    {copiedDelete ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-                <a className="btn ghost" href={deleteUrl}>
-                  Delete this note
-                </a>
-              </div>
-            )}
+        {qr && (
+          <div className="qr">
+            <img src={qr} alt="QR code for the encrypted link" />
+            <span className="eyebrow">Scan to open</span>
           </div>
+        )}
+
+        <p className="share-url-plain">{shareUrl}</p>
+        <div className="submit-row">
+          <button className="btn primary" type="button" onClick={copy}>
+            {copied ? "Copied!" : "Copy link"}
+          </button>
+          <a className="btn ghost" href={shareUrl} target="_blank" rel="noreferrer">
+            Open link
+          </a>
+          <button
+            className="btn ghost"
+            type="button"
+            onClick={() => {
+              reset();
+              setFile(null);
+            }}
+          >
+            Create another
+          </button>
         </div>
+        {deleteUrl && (
+          <div className="delete-keep">
+            <p className="eyebrow">Keep this to delete the note</p>
+            <p className="muted small">
+              Do not send this with the share link. Anyone with it can destroy
+              the note before it is opened.
+            </p>
+            <p className="share-url-plain">{deleteUrl}</p>
+            <div className="submit-row">
+              <button className="btn ghost" type="button" onClick={copyDelete}>
+                {copiedDelete ? "Copied!" : "Copy delete link"}
+              </button>
+              <a className="btn ghost" href={deleteUrl}>
+                Delete this note
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
