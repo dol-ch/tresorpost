@@ -38,6 +38,8 @@ with the `dark` class on `<html>` (and `data-theme` for older overlays).
 ## Public repo (this one)
 
 - Ships **only** the open default theme — system fonts and an original MIT mark.
+- Tab and home-screen icons are that same padlock (`frontend/public/favicon.svg`
+  and `frontend/public/apple-touch-icon.svg`), not a private lockup.
 - Contains **no** proprietary fonts or logos, so it is safe to publish and fully
   self-contained: `git clone … && cargo run` builds and runs the neutral build.
 - `frontend/src/brand/private/` is listed in `.gitignore`, so licensed assets
@@ -54,6 +56,9 @@ Keep a **private** repository/fork that adds `frontend/src/brand/private/`:
 3. Create `frontend/src/brand/private/index.tsx` exporting a `Brand`
    (name, tagline, `Wordmark`, footer links).
 4. Build normally — the overlay is picked up automatically.
+5. If you need a branded tab icon, replace `frontend/public/favicon.svg` (and
+   `apple-touch-icon.svg`) **only in the private fork**. Do not put that lockup
+   in the public repository.
 
 Because the overlay is a self-contained folder, staying in sync with the public
 project is just:
