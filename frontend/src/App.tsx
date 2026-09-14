@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CreatePage } from "./CreatePage";
+import { HomepageStats } from "./HomepageStats";
 import { ViewPage } from "./ViewPage";
 import { DeletePage } from "./DeletePage";
 import { AdminPage } from "./AdminPage";
@@ -86,6 +87,7 @@ export function App() {
               </div>
             </section>
             <CreatePage />
+            <HomepageStats />
           </>
         )}
         {route.name === "view" && (
