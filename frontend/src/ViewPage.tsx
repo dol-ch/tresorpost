@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/common";
+import { Clock, Eye } from "lucide-react";
 import { fetchSecret, deleteSecret } from "./api";
 import { decryptBytes, base64UrlToBytes, type StreamMeta, type StreamHeader } from "./crypto";
 import { decodePayload, base64ToBlob, type SecretPayload } from "./payload";
@@ -17,6 +18,34 @@ import {
 import { humanSize } from "./options";
 import { copyText } from "./clipboard";
 import "./highlight.css";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+
+function progressPct(done: number, total: number) {
+  if (!total) return 0;
+  return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
+}
 
 function RenderedText({ html }: { html: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -70,11 +99,11 @@ function RenderedText({ html }: { html: string }) {
   }
 
   return (
-    <div className="rt-wrap">
-      <div className="rt-toolbar">
-        <button className="copy-btn" onClick={copyAll}>
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" type="button" onClick={copyAll}>
           {copied ? "Copied!" : "Copy text"}
-        </button>
+        </Button>
       </div>
       <div
         className="rendered-text"
@@ -111,35 +140,6 @@ type Status =
       expiresAt: number;
     };
 
-function SdIcon({ kind }: { kind: "opens" | "clock" }) {
-  return (
-    <svg
-      className="sd-icon"
-      viewBox="0 0 24 24"
-      width="13"
-      height="13"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {kind === "opens" ? (
-        <>
-          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-          <circle cx="12" cy="12" r="2.5" />
-        </>
-      ) : (
-        <>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v5l3 2" />
-        </>
-      )}
-    </svg>
-  );
-}
-
 function relativeTime(diffSec: number): string {
   const rtf = new Intl.RelativeTimeFormat(undefined, {
     numeric: "auto",
@@ -166,6 +166,33 @@ function formatExpiry(sec: number): { absolute: string; relative: string } {
     timeStyle: "short",
   }).format(d);
   return { absolute, relative: relativeTime(sec - Date.now() / 1000) };
+}
+
+function SelfDestruct({
+  opensLine,
+  expiry,
+}: {
+  opensLine: string | null;
+  expiry: { absolute: string; relative: string };
+}) {
+  return (
+    <div className="space-y-2 rounded-lg border bg-muted/30 px-3 py-2.5">
+      <p className="text-xs font-medium text-muted-foreground">Self-destructs</p>
+      <div className="space-y-1.5 text-sm">
+        {opensLine && (
+          <p className="flex items-center gap-2">
+            <Eye className="size-3.5 text-muted-foreground" />
+            {opensLine}
+          </p>
+        )}
+        <p className="flex items-center gap-2">
+          <Clock className="size-3.5 text-muted-foreground" />
+          {expiry.absolute}
+          <span className="text-muted-foreground">· {expiry.relative}</span>
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
@@ -232,34 +259,49 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
 
   if (status.state === "loading") {
     return (
-      <div className="card">
-        <p className="muted">Decrypting…</p>
-      </div>
+      <Card>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Decrypting…</p>
+        </CardContent>
+      </Card>
     );
   }
   if (status.state === "gone") {
     return (
-      <div className="card center">
-        <h2>Nothing here</h2>
-        <p className="muted">
-          This secret has expired, was already opened the maximum number of
-          times, or never existed.
-        </p>
-        <a className="btn primary" href="#/">
-          Create your own
-        </a>
-      </div>
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle>Nothing here</CardTitle>
+          <CardDescription>
+            This secret has expired, was already opened the maximum number of
+            times, or never existed.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="justify-center">
+          <Button asChild>
+            <a href="#/">Create your own</a>
+          </Button>
+        </CardFooter>
+      </Card>
     );
   }
   if (status.state === "error") {
     return (
-      <div className="card center">
-        <h2>Could not open</h2>
-        <p className="error">{status.message}</p>
-        <a className="btn ghost" href="#/">
-          Go home
-        </a>
-      </div>
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle>Could not open</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{status.message}</AlertDescription>
+          </Alert>
+        </CardContent>
+        <CardFooter className="justify-center">
+          <Button variant="outline" asChild>
+            <a href="#/">Go home</a>
+          </Button>
+        </CardFooter>
+      </Card>
     );
   }
   if (status.state === "s3file") {
@@ -285,44 +327,34 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
   }
 
   return (
-    <div className="card">
-      <div className="view-banner">
-        <span className="badge">Decrypted locally</span>
-      </div>
-      <div className="selfdestruct">
-        <span className="eyebrow">Self-destructs</span>
-        <div className="sd-lines">
-          {opensLine && (
-            <span className="sd-line">
-              <SdIcon kind="opens" />
-              {opensLine}
-            </span>
-          )}
-          <span className="sd-line">
-            <SdIcon kind="clock" />
-            {expiry.absolute}
-            <span className="sd-rel">· {expiry.relative}</span>
-          </span>
-        </div>
-      </div>
-      {payload.kind === "text" && <RenderedText html={payload.data} />}
-      {payload.kind === "image" && (
-        <div className="media">
-          <img
-            alt={payload.filename ?? "image"}
-            src={URL.createObjectURL(base64ToBlob(payload.data, payload.mime ?? "image/*"))}
+    <Card>
+      <CardHeader>
+        <Badge variant="secondary" className="w-fit">
+          Decrypted locally
+        </Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <SelfDestruct opensLine={opensLine} expiry={expiry} />
+        {payload.kind === "text" && <RenderedText html={payload.data} />}
+        {payload.kind === "image" && (
+          <div className="space-y-2 text-center">
+            <img
+              alt={payload.filename ?? "image"}
+              className="mx-auto max-w-full rounded-lg border"
+              src={URL.createObjectURL(base64ToBlob(payload.data, payload.mime ?? "image/*"))}
+            />
+            <p className="text-sm text-muted-foreground">{payload.filename}</p>
+          </div>
+        )}
+        {payload.kind === "video" && (
+          <VideoPlayer
+            blob={base64ToBlob(payload.data, payload.mime ?? "video/mp4")}
+            filename={payload.filename}
           />
-          <p className="muted small">{payload.filename}</p>
-        </div>
-      )}
-      {payload.kind === "video" && (
-        <VideoPlayer
-          blob={base64ToBlob(payload.data, payload.mime ?? "video/mp4")}
-          filename={payload.filename}
-        />
-      )}
-      {payload.kind === "file" && <FileDownload payload={payload} />}
-      <div className="actions">
+        )}
+        {payload.kind === "file" && <FileDownload payload={payload} />}
+      </CardContent>
+      <CardFooter className="flex-wrap gap-2">
         {recipientDeleteToken && (
           <RecipientDestroy
             id={id}
@@ -330,11 +362,11 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
             onDestroyed={() => setStatus({ state: "gone" })}
           />
         )}
-        <a className="btn ghost" href="#/">
-          Create your own
-        </a>
-      </div>
-    </div>
+        <Button variant="outline" asChild>
+          <a href="#/">Create your own</a>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -438,85 +470,68 @@ function S3FileView({
   }
 
   return (
-    <div className="card">
-      <div className="view-banner">
-        <span className="badge">Decrypted locally</span>
-      </div>
-      <div className="selfdestruct">
-        <span className="eyebrow">Self-destructs</span>
-        <div className="sd-lines">
-          {opensLine && (
-            <span className="sd-line">
-              <SdIcon kind="opens" />
-              {opensLine}
-            </span>
-          )}
-          <span className="sd-line">
-            <SdIcon kind="clock" />
-            {expiry.absolute}
-            <span className="sd-rel">· {expiry.relative}</span>
-          </span>
-        </div>
-      </div>
-      <div className="media center">
-        <p className="file-name">{header.filename || "download"}</p>
-        <p className="muted small">{humanSize(header.size)}</p>
-        {playBlob && isVideo && <VideoPlayer blob={playBlob} filename={header.filename} />}
-        {playBlob && isImage && <ImagePreview blob={playBlob} filename={header.filename} />}
-        {progress && (
-          <div className="progress" role="status" aria-live="polite">
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{
-                  width: `${progress.total ? Math.min(100, Math.max(0, (progress.done / progress.total) * 100)) : 0}%`,
-                }}
-              />
+    <Card>
+      <CardHeader>
+        <Badge variant="secondary" className="w-fit">
+          Decrypted locally
+        </Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <SelfDestruct opensLine={opensLine} expiry={expiry} />
+        <div className="space-y-3 text-center">
+          <p className="font-heading text-lg font-medium break-all">
+            {header.filename || "download"}
+          </p>
+          <p className="text-sm text-muted-foreground">{humanSize(header.size)}</p>
+          {playBlob && isVideo && <VideoPlayer blob={playBlob} filename={header.filename} />}
+          {playBlob && isImage && <ImagePreview blob={playBlob} filename={header.filename} />}
+          {progress && (
+            <div className="space-y-2" role="status" aria-live="polite">
+              <Progress value={progressPct(progress.done, progress.total)} />
+              <p className="text-xs text-muted-foreground">
+                {phase === "done"
+                  ? playBlob
+                    ? "Ready to play"
+                    : "Downloaded"
+                  : "Downloading & decrypting"}
+                : {humanSize(Math.max(0, progress.done))} / {humanSize(progress.total)} (
+                {progressPct(progress.done, progress.total)}%)
+              </p>
             </div>
-            <p className="muted small progress-label">
-              {phase === "done"
-                ? playBlob
-                  ? "Ready to play"
-                  : "Downloaded"
-                : "Downloading & decrypting"}
-              : {humanSize(Math.max(0, progress.done))} / {humanSize(progress.total)}
-              {progress.total
-                ? ` (${Math.min(100, Math.max(0, Math.floor((progress.done / progress.total) * 100)))}%)`
-                : ""}
-            </p>
-          </div>
-        )}
-        {message && <p className="error">{message}</p>}
-        {phase !== "downloading" && !playBlob && (
-          <div className="media-actions">
-            {canPreviewInBrowser && (
-              <button className="btn primary fit" onClick={onPlay}>
-                {isImage ? "Decrypt & view" : "Decrypt & play"}
-              </button>
-            )}
-            <button
-              className={canPreviewInBrowser ? "btn ghost" : "btn primary fit"}
-              onClick={onDownload}
-            >
-              {isVideo ? "Download video" : isImage ? "Download image" : "Download & decrypt"}
-            </button>
-          </div>
-        )}
-        {phase === "downloading" && (
-          <button className="btn ghost" onClick={() => abortRef.current?.abort()}>
-            Cancel
-          </button>
-        )}
-      </div>
-      <div className="actions">
+          )}
+          {message && (
+            <Alert variant="destructive">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          )}
+          {phase !== "downloading" && !playBlob && (
+            <div className="flex flex-wrap justify-center gap-2">
+              {canPreviewInBrowser && (
+                <Button onClick={onPlay}>
+                  {isImage ? "Decrypt & view" : "Decrypt & play"}
+                </Button>
+              )}
+              <Button variant={canPreviewInBrowser ? "outline" : "default"} onClick={onDownload}>
+                {isVideo ? "Download video" : isImage ? "Download image" : "Download & decrypt"}
+              </Button>
+            </div>
+          )}
+          {phase === "downloading" && (
+            <Button variant="outline" onClick={() => abortRef.current?.abort()}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter className="flex-wrap gap-2">
         {recipientDeleteToken && (
           <RecipientDestroy id={id} token={recipientDeleteToken} onDestroyed={onDestroyed} />
         )}
-        <a className="btn ghost" href="#/">
-          Create your own
-        </a>
-      </div>
-    </div>
+        <Button variant="outline" asChild>
+          <a href="#/">Create your own</a>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -532,14 +547,7 @@ function RecipientDestroy({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onClick() {
-    if (
-      !window.confirm(
-        "Permanently delete this from the server? Anyone else with the link will not be able to open it.",
-      )
-    ) {
-      return;
-    }
+  async function onConfirm() {
     setBusy(true);
     setError(null);
     try {
@@ -553,12 +561,33 @@ function RecipientDestroy({
   }
 
   return (
-    <>
-      <button className="btn ghost" onClick={onClick} disabled={busy}>
-        {busy ? "Deleting…" : "Delete permanently"}
-      </button>
-      {error && <p className="error">{error}</p>}
-    </>
+    <div className="space-y-2">
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive" disabled={busy}>
+            {busy ? "Deleting…" : "Delete permanently"}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently delete this?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anyone else with the link will not be able to open it. This cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={onConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+    </div>
   );
 }
 
@@ -566,13 +595,13 @@ function ImagePreview({ blob, filename }: { blob: Blob; filename?: string }) {
   const url = useMemo(() => URL.createObjectURL(blob), [blob]);
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   return (
-    <div className="video-block">
-      <img alt={filename ?? "image"} src={url} />
-      <div className="media-actions">
-        <a className="btn primary fit" href={url} download={filename ?? "image"}>
+    <div className="flex flex-col items-center gap-3">
+      <img alt={filename ?? "image"} className="max-w-full rounded-lg border" src={url} />
+      <Button asChild>
+        <a href={url} download={filename ?? "image"}>
           Download image
         </a>
-      </div>
+      </Button>
     </div>
   );
 }
@@ -582,10 +611,10 @@ function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   return (
-    <div className="video-block">
+    <div className="flex flex-col items-center gap-3">
       {!failed ? (
         <video
-          className="player"
+          className="max-h-[min(70vh,720px)] w-full rounded-lg border bg-black"
           controls
           playsInline
           preload="metadata"
@@ -593,16 +622,16 @@ function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
           onError={() => setFailed(true)}
         />
       ) : (
-        <p className="muted small video-fallback">
+        <p className="max-w-prose text-center text-sm text-muted-foreground">
           This browser cannot decode this video (common for AVI and some MOV).
           Download the file and open it in a player.
         </p>
       )}
-      <div className="media-actions">
-        <a className="btn primary fit" href={url} download={filename ?? "video"}>
+      <Button asChild>
+        <a href={url} download={filename ?? "video"}>
           Download video
         </a>
-      </div>
+      </Button>
     </div>
   );
 }
@@ -611,12 +640,16 @@ function FileDownload({ payload }: { payload: SecretPayload }) {
   const blob = base64ToBlob(payload.data, payload.mime ?? "application/octet-stream");
   const url = URL.createObjectURL(blob);
   return (
-    <div className="media center">
-      <p className="file-name">{payload.filename ?? "download"}</p>
-      <p className="muted small">{humanSize(blob.size)}</p>
-      <a className="btn primary" href={url} download={payload.filename ?? "download"}>
-        Download file
-      </a>
+    <div className="space-y-3 text-center">
+      <p className="font-heading text-lg font-medium break-all">
+        {payload.filename ?? "download"}
+      </p>
+      <p className="text-sm text-muted-foreground">{humanSize(blob.size)}</p>
+      <Button asChild>
+        <a href={url} download={payload.filename ?? "download"}>
+          Download file
+        </a>
+      </Button>
     </div>
   );
 }

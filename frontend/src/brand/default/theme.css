@@ -1,85 +1,15 @@
-/* Open default theme — system fonts only, no licensed assets.
-   Ships both a dark and a light palette. The active one is chosen by the
-   `data-theme` attribute on <html> (set before first paint in index.html).
-   Every token here can be overridden by a private theme (theme.override layer). */
+/* Optional token aliases for the private brand overlay and highlight.js.
+   The live shadcn palette lives in src/index.css (:root / .dark). A private
+   overlay should override those variables, not the old --bg/--accent names. */
 
 @layer theme.base {
   :root {
-    color-scheme: dark;
-
-    --bg: #0f1115;
-    --bg-deep: #0b0d11;
-    --panel: #151823;
-    --panel-2: #1b1f2b;
-    --hair: rgba(255, 255, 255, 0.1);
-    --hair-strong: rgba(255, 255, 255, 0.17);
-    --hover: rgba(255, 255, 255, 0.06);
-    --hover-weak: rgba(255, 255, 255, 0.04);
-    --code-bg: rgba(255, 255, 255, 0.06);
-
-    --text: #eef1f6;
-    --ink-2: #aab2c1;
-    --label: #808b9d;
-
-    --accent: #4f7cff;
-    --accent-hover: #5f88ff;
-    --accent-text: #9db6ff;
-    --accent-ring: rgba(93, 140, 255, 0.4);
-
-    --danger: #e5807a;
-
-    /* syntax highlighting (dark) */
-    --hl-comment: #6b7488;
-    --hl-keyword: #7aa2ff;
-    --hl-string: #7bd88f;
-    --hl-number: #e5a56a;
-    --hl-title: #9db6ff;
-    --hl-type: #6fd0c6;
-    --hl-attr: #d0a3ff;
-
-    --font-display: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
-      sans-serif;
-    --font-text: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
-      sans-serif;
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, "Cascadia Code",
-      "Liberation Mono", monospace;
-
-    --radius: 6px;
-    --radius-lg: 10px;
-    --maxw: 720px;
-  }
-
-  :root[data-theme="light"] {
-    color-scheme: light;
-
-    --bg: #f6f7f9;
-    --bg-deep: #ffffff;
-    --panel: #ffffff;
-    --panel-2: #eef1f5;
-    --hair: rgba(0, 0, 0, 0.12);
-    --hair-strong: rgba(0, 0, 0, 0.2);
-    --hover: rgba(0, 0, 0, 0.05);
-    --hover-weak: rgba(0, 0, 0, 0.035);
-    --code-bg: rgba(0, 0, 0, 0.05);
-
-    --text: #1a1d24;
-    --ink-2: #4b5563;
-    --label: #6b7280;
-
-    --accent: #3b6ef0;
-    --accent-hover: #2f5fe0;
-    --accent-text: #2456d6;
-    --accent-ring: rgba(59, 110, 240, 0.3);
-
-    --danger: #c4453f;
-
-    /* syntax highlighting (light) */
-    --hl-comment: #8a94a6;
-    --hl-keyword: #2456d6;
-    --hl-string: #1a7f37;
-    --hl-number: #b5540a;
-    --hl-title: #6f42c1;
-    --hl-type: #0b7285;
-    --hl-attr: #8250df;
+    --bg: var(--background);
+    --text: var(--foreground);
+    --ink-2: var(--muted-foreground);
+    --label: var(--muted-foreground);
+    --danger: var(--destructive);
+    --font-display: var(--font-heading);
+    --font-text: var(--font-sans);
   }
 }

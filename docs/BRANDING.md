@@ -15,7 +15,7 @@ frontend/src/brand/
 ├── types.ts            # the Brand contract
 ├── index.ts            # resolves the active brand (default OR private override)
 ├── default/            # open, redistributable theme (system fonts, MIT mark)
-│   ├── theme.css       # CSS variables: colors, fonts, radii
+│   ├── theme.css       # aliases onto shadcn tokens (src/index.css)
 │   ├── Emblem.tsx      # original MIT padlock mark
 │   └── index.tsx       # name, tagline, wordmark, footer links
 └── private/            # OPTIONAL proprietary overlay — git-ignored
@@ -31,8 +31,9 @@ folder never breaks the build.
 
 Nothing else in the app references a specific brand: `App.tsx` renders
 `brand.Wordmark`, reads `brand.name` / `brand.tagline` / `brand.footerLinks`,
-and every stylesheet reads CSS variables (`--accent`, `--font-display`, …)
-defined by the active theme.
+and the UI reads shadcn CSS variables (`--background`, `--foreground`,
+`--primary`, `--font-sans`, …) from `frontend/src/index.css`. Toggle dark mode
+with the `dark` class on `<html>` (and `data-theme` for older overlays).
 
 ## Public repo (this one)
 
@@ -49,7 +50,7 @@ Keep a **private** repository/fork that adds `frontend/src/brand/private/`:
 1. Add your fonts under `frontend/src/brand/private/assets/fonts/` and logos
    under `…/assets/logos/`.
 2. Create `frontend/src/brand/private/theme.css` with your `@font-face`
-   declarations and `:root` token overrides (colors, fonts).
+   declarations and `:root` / `.dark` token overrides (shadcn variables).
 3. Create `frontend/src/brand/private/index.tsx` exporting a `Brand`
    (name, tagline, `Wordmark`, footer links).
 4. Build normally — the overlay is picked up automatically.
@@ -73,11 +74,15 @@ git merge upstream/main      # feature work lives outside brand/private, so this
 /* … Euclid Circular B (400/500), Euclid Mono … */
 
 :root {
-  --bg: #111111; --text: #fafaf7; --label: #8f8f88;
-  --accent: #2e5d50; --accent-text: #8fbeb0;      /* teal slate */
-  --font-display: "Euclid Flex", sans-serif;
-  --font-text: "Euclid Circular B", sans-serif;
+  --background: #ffffff; --foreground: #111111;
+  --primary: #2e5d50; --primary-foreground: #fafaf7;
+  --font-sans: "Euclid Circular B", sans-serif;
+  --font-heading: "Euclid Flex", sans-serif;
   --font-mono: "Euclid Mono", ui-monospace, monospace;
+}
+.dark {
+  --background: #111111; --foreground: #fafaf7;
+  --primary: #8fbeb0; --primary-foreground: #111111;
 }
 ```
 
