@@ -2,7 +2,7 @@
    adapt to both the dark and light palettes. */
 
 .hljs {
-  color: var(--text);
+  color: var(--foreground);
   background: transparent;
 }
 
@@ -65,5 +65,5 @@
 }
 
 .hljs-deletion {
-  color: var(--danger);
+  color: var(--destructive);
 }
