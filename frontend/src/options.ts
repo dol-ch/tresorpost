@@ -25,7 +25,12 @@ export const EXPIRY_OPTIONS: ExpiryOption[] = [
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 export function humanSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
+  if (!Number.isFinite(bytes) || bytes < 0) return "0 B";
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  if (bytes < 1024 * 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  }
+  return `${(bytes / (1024 * 1024 * 1024 * 1024)).toFixed(2)} TB`;
 }
