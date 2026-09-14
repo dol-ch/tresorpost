@@ -41,6 +41,13 @@ branding (logos, fonts) lives in a swappable theme layer; see
 - **Per-IP create rate limit** (default 60 notes / hour; `CREATE_RATE_LIMIT` /
   `CREATE_RATE_WINDOW_SECS`). Applies to `POST /api/secrets` and
   `POST /api/uploads/init`. `429` when exceeded.
+- **Per-IP read/delete rate limit** (default 300 / hour; `READ_RATE_LIMIT` /
+  `READ_RATE_WINDOW_SECS`) on `GET`/`DELETE /api/secrets/{id}`. `429` when exceeded.
+- **Admin auth failure limit** (default 10 failed tokens / IP / hour;
+  `ADMIN_AUTH_MAX_FAILURES` / `ADMIN_AUTH_WINDOW_SECS`). Only mismatches count.
+- **HTTP security headers** on every response (CSP, nosniff, no-referrer, DENY
+  framing, Permissions-Policy, HSTS). CSP `connect-src` includes `S3_ENDPOINT`
+  when S3 is configured.
 - **Durable links** backed by SQLite. Optional **S3** path for large files
   (up to ~5 GB).
 
@@ -55,8 +62,8 @@ branding (logos, fonts) lives in a swappable theme layer; see
 The server exposes a tiny API and, in production, serves the built SPA:
 
 - `POST /api/secrets` — store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete, allow_recipient_delete }`, returns `{ id, delete_token?, recipient_delete_token? }`. `429` if the per-IP create limit is exceeded. `507` if the SQLite file would exceed `MAX_SQLITE_MB`.
-- `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted.
-- `DELETE /api/secrets/{id}` — destroy with `{ delete_token }` (creator **or** recipient token). Same `404` for unknown id or wrong token. `503` if the S3 object could not be deleted (row is kept so a retry can finish).
+- `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted. `429` if the per-IP read limit is exceeded.
+- `DELETE /api/secrets/{id}` — destroy with `{ delete_token }` (creator **or** recipient token). Same `404` for unknown id or wrong token. `503` if the S3 object could not be deleted (row is kept so a retry can finish). `429` if the per-IP read limit is exceeded.
 - `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted.
 - `DELETE /api/secrets/{id}` — destroy with `{ delete_token }` (creator **or** recipient token). Same `404` for unknown id or wrong token.
 - `GET  /api/config` — `{ max_file_bytes, s3_enabled, max_s3_file_bytes }`.
@@ -186,8 +193,13 @@ present — copy `.env.example` to `.env`):
 | ----------------------- | -------------- | -------------------------------------------------------------- |
 | `MAX_FILE_MB`           | `5`            | Max attachment size (MB) for the SQLite (small-file) path.     |
 | `CREATE_RATE_LIMIT`     | `60`           | Max creates per IP per window. `0` disables.                   |
-| `CREATE_RATE_WINDOW_SECS` | `3600`       | Rate-limit window in seconds.                                  |
+| `CREATE_RATE_WINDOW_SECS` | `3600`       | Create rate-limit window in seconds.                           |
+| `READ_RATE_LIMIT`       | `300`          | Max GET/DELETE `/api/secrets/{id}` per IP per window. `0` disables. |
+| `READ_RATE_WINDOW_SECS` | `3600`         | Read/delete rate-limit window in seconds.                      |
 | `TRUST_PROXY`           | `false`        | Honour `X-Forwarded-For` / `X-Real-IP` (only behind a proxy).  |
+| `ADMIN_TOKEN`           | _(unset)_      | Enables `#/admin` and `/api/admin/*`. Generate with `openssl rand -hex 32`. |
+| `ADMIN_AUTH_MAX_FAILURES` | `10`         | Failed admin logins per IP per window. `0` disables.           |
+| `ADMIN_AUTH_WINDOW_SECS` | `3600`        | Admin-auth failure window in seconds.                          |
 | `PORT`                  | `3000`         | HTTP port.                                                     |
 | `DATABASE_PATH`         | `db/data.db`   | SQLite database file path.                                     |
 | `STATIC_DIR`            | `frontend/dist`| Built frontend directory to serve.                             |
@@ -219,6 +231,50 @@ ADMIN_TOKEN=your-secret cargo run
 
 When `ADMIN_TOKEN` is unset the admin endpoints are disabled entirely. Only
 aggregate metadata is exposed — never any ciphertext or keys.
+
+Failed `x-admin-token` values are counted per client IP. After
+`ADMIN_AUTH_MAX_FAILURES` (default 10) in `ADMIN_AUTH_WINDOW_SECS` (default 1
+hour) the endpoints return `429` until the window slides. Successful auth does
+not consume that budget. Set either env var to `0` to disable the limiter.
+
+## Security
+
+Defense-in-depth around the zero-knowledge model. **None of this changes
+client-side encryption** (XChaCha20-Poly1305, key in the URL fragment).
+
+**TLS and reverse proxy.** The binary serves plain HTTP. Terminate TLS at
+nginx, Caddy, or a load balancer in production. Set `TRUST_PROXY=true` only
+when that proxy **overwrites** `X-Forwarded-For` / `X-Real-IP`; otherwise
+clients can spoof IPs and bypass per-IP limits. Responses include
+`Strict-Transport-Security: max-age=63072000; includeSubDomains` so browsers
+stick to HTTPS after the first secure visit.
+
+**Admin token.** Generate a long random secret, for example:
+
+```bash
+openssl rand -hex 32
+```
+
+Put it in `ADMIN_TOKEN` (environment or `.env`). Do not commit it or put it in
+the image.
+
+**In-memory limiters × replicas.** Create, read/delete, and admin-auth
+limiters keep counters **in process memory**. Each replica has its own map, so
+N replicas allow roughly N× the configured budget per IP. Use a single replica
+or a shared limiter if you need a global cap.
+
+**HTTP headers.** Every response (API and static files) sets:
+
+- `Content-Security-Policy` — `default-src 'none'`; scripts from `'self'`;
+  styles `'self' 'unsafe-inline'` (progress UI); images `'self' blob: data:`;
+  media `'self' blob:`; `connect-src 'self'` plus `S3_ENDPOINT` when set
+  (browser → S3 presigned URLs); `base-uri 'none'`; `form-action 'self'`;
+  `frame-ancestors 'none'`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: no-referrer`
+- `X-Frame-Options: DENY`
+- `Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=()`
+- `Strict-Transport-Security` as above
 
 ## Docker
 
