@@ -133,6 +133,7 @@ async fn main() {
     let api = Router::new()
         .route("/health", get(secrets::health))
         .route("/config", get(secrets::config))
+        .route("/stats", get(secrets::public_stats))
         .route("/secrets", post(secrets::create_secret))
         .route("/secrets/{id}", get(secrets::read_secret).delete(secrets::delete_secret))
         .route("/uploads/init", post(uploads::upload_init))

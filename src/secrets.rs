@@ -39,6 +39,36 @@ pub(crate) async fn config(State(state): State<AppState>) -> Json<ConfigResp> {
     })
 }
 
+#[derive(Serialize)]
+pub(crate) struct PublicStats {
+    /// All-time encrypted links that finished creating (including later burned/expired).
+    links_created: i64,
+    /// All-time ciphertext bytes stored at create time (SQLite body or S3 object size).
+    bytes_transferred: i64,
+    /// All-time counts for the public kinds. Never includes ids, keys, or ciphertext.
+    by_kind: std::collections::HashMap<String, i64>,
+}
+
+/// Public aggregate lifetime stats. Reads the `metrics` counters — no secrets table scan.
+pub(crate) async fn public_stats(State(state): State<AppState>) -> Json<PublicStats> {
+    Json(public_stats_from_metrics(crate::db::load_metrics(&state.pool).await))
+}
+
+pub(crate) fn public_stats_from_metrics(
+    m: std::collections::HashMap<String, i64>,
+) -> PublicStats {
+    let get_m = |k: &str| m.get(k).copied().unwrap_or(0);
+    let mut by_kind = std::collections::HashMap::new();
+    for k in ["text", "image", "video", "file"] {
+        by_kind.insert(k.to_string(), get_m(&format!("created_{k}")));
+    }
+    PublicStats {
+        links_created: get_m("created_total"),
+        bytes_transferred: get_m("bytes_created_total"),
+        by_kind,
+    }
+}
+
 pub(crate) async fn create_secret(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -287,5 +317,38 @@ pub(crate) async fn delete_secret(
             StatusCode::SERVICE_UNAVAILABLE,
             "could not delete storage, retry",
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn public_stats_are_aggregates_only() {
+        let mut m = HashMap::new();
+        m.insert("created_total".into(), 12);
+        m.insert("bytes_created_total".into(), 1_048_576);
+        m.insert("created_text".into(), 7);
+        m.insert("created_image".into(), 3);
+        m.insert("created_file".into(), 2);
+        m.insert("opens_total".into(), 99);
+        m.insert("burned_total".into(), 4);
+        let stats = public_stats_from_metrics(m);
+        let json = serde_json::to_value(&stats).unwrap();
+        assert_eq!(json["links_created"], 12);
+        assert_eq!(json["bytes_transferred"], 1_048_576);
+        assert_eq!(json["by_kind"]["text"], 7);
+        assert_eq!(json["by_kind"]["image"], 3);
+        assert_eq!(json["by_kind"]["video"], 0);
+        assert_eq!(json["by_kind"]["file"], 2);
+        assert!(json.get("opens_total").is_none());
+        assert!(json.get("burned_total").is_none());
+        assert!(json.get("active").is_none());
+        assert!(json.get("daily").is_none());
+        let s = json.to_string();
+        assert!(!s.contains("ciphertext"));
+        assert!(!s.contains("admin"));
     }
 }
