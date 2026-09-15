@@ -26,6 +26,7 @@ const editorSchema = new Schema({
 export interface EditorHandle {
   getHTML: () => string;
   isEmpty: () => boolean;
+  focus: () => void;
 }
 
 function docIsEmpty(doc: EditorState["doc"]): boolean {
@@ -34,14 +35,20 @@ function docIsEmpty(doc: EditorState["doc"]): boolean {
 
 export const RichTextEditor = forwardRef<
   EditorHandle,
-  { onEmptyChange?: (empty: boolean) => void }
->(({ onEmptyChange }, ref) => {
+  {
+    autoFocus?: boolean;
+    onEmptyChange?: (empty: boolean) => void;
+    onBlurAway?: () => void;
+  }
+>(({ autoFocus, onEmptyChange, onBlurAway }, ref) => {
   const hostRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onEmptyChangeRef = useRef(onEmptyChange);
   onEmptyChangeRef.current = onEmptyChange;
+  const onBlurAwayRef = useRef(onBlurAway);
+  onBlurAwayRef.current = onBlurAway;
   const [view, setView] = useState<EditorView | null>(null);
-  // Bumped on every transaction so the toolbar re-computes active/enabled state.
   const [, forceRender] = useReducer((n: number) => n + 1, 0);
 
   useEffect(() => {
@@ -62,11 +69,19 @@ export const RichTextEditor = forwardRef<
         onEmptyChangeRef.current?.(empty);
         forceRender();
       },
+      handleDOMEvents: {
+        blur(_view, event) {
+          const next = event.relatedTarget as Node | null;
+          if (next && wrapRef.current?.contains(next)) return false;
+          onBlurAwayRef.current?.();
+          return false;
+        },
+      },
     });
     v.dom.classList.add("is-empty");
-    onEmptyChangeRef.current?.(true);
     viewRef.current = v;
     setView(v);
+    if (autoFocus) v.focus();
     return () => {
       v.destroy();
       viewRef.current = null;
@@ -89,12 +104,24 @@ export const RichTextEditor = forwardRef<
       if (!v) return true;
       return docIsEmpty(v.state.doc);
     },
+    focus: () => {
+      viewRef.current?.focus();
+    },
   }));
 
   return (
-    <div className="overflow-hidden rounded-t-[14px]">
-      {view && <EditorToolbar view={view} />}
+    <div className="overflow-hidden rounded-t-[14px]" ref={wrapRef}>
       <div className="editor-host" ref={hostRef} />
+      {view && (
+        <div className="flex items-center justify-between gap-2 border-t border-border">
+          <div className="min-w-0 flex-1">
+            <EditorToolbar view={view} />
+          </div>
+          <span className="shrink-0 pr-3 text-[12.5px] text-muted-foreground">
+            Rich text
+          </span>
+        </div>
+      )}
     </div>
   );
 });

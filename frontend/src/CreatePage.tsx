@@ -26,7 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { Segmented } from "@/components/ui/segmented";
 import { Switch } from "@/components/ui/switch";
 import { Kicker } from "@/components/kit";
-import { ChevronDown, Paperclip, X } from "lucide-react";
+import { ChevronDown, CircleAlert, File as FileIcon, Paperclip, X } from "lucide-react";
 
 function progressPct(done: number, total: number) {
   if (!total) return 0;
@@ -87,6 +87,7 @@ export function CreatePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [composeDrag, setComposeDrag] = useState(false);
   const [editorEmpty, setEditorEmpty] = useState(true);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     fetchConfig()
@@ -241,6 +242,7 @@ export function CreatePage() {
       setError(`File is too large (${humanSize(next.size)}). Max is ${humanSize(cap)}.`);
     }
     setFile(next);
+    if (next) setEditorOpen(false);
   }
 
   if (shareUrl) {
@@ -379,6 +381,8 @@ export function CreatePage() {
             onClick={() => {
               reset();
               setFile(null);
+              setEditorEmpty(true);
+              setEditorOpen(false);
             }}
           >
             Create another
@@ -393,8 +397,8 @@ export function CreatePage() {
       <CardContent className="flex flex-col gap-[22px]">
         <div
           className={
-            composeDrag
-              ? "overflow-hidden rounded-[14px] border-[1.5px] border-primary bg-muted"
+            composeDrag || (editorOpen && !file)
+              ? "overflow-hidden rounded-[14px] border-[1.5px] border-primary bg-card"
               : "overflow-hidden rounded-[14px] border border-border bg-card"
           }
           onDragOver={(e) => {
@@ -409,9 +413,12 @@ export function CreatePage() {
             if (dropped) takeFile(dropped);
           }}
         >
-          {file && (
-            <div className="flex flex-col gap-2 px-4 py-4">
+          {file ? (
+            <div className="flex flex-col gap-3 px-4 py-4">
               <div className="flex items-center gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-primary/10 text-primary">
+                  <FileIcon className="size-5" strokeWidth={1.8} />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-medium">{file.name}</div>
                   <div className="text-[13px] text-muted-foreground">
@@ -424,35 +431,76 @@ export function CreatePage() {
                   variant="ghost"
                   size="icon-sm"
                   aria-label="Remove file"
-                  onClick={() => takeFile(null)}
+                  onClick={() => {
+                    takeFile(null);
+                    setEditorOpen(!editorEmpty);
+                  }}
                 >
                   <X />
                 </Button>
               </div>
               {!editorEmpty && (
-                <p className="text-[13px] text-muted-foreground">
-                  One note holds one thing. Your text is kept aside — remove the
-                  file to get it back
+                <p className="flex items-start gap-2 text-[13px] text-muted-foreground">
+                  <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.8} />
+                  <span>
+                    One note holds one thing. Go back and delete your text, or it
+                    will be lost.
+                  </span>
                 </p>
               )}
             </div>
+          ) : !editorOpen && editorEmpty ? (
+            <textarea
+              readOnly
+              rows={5}
+              placeholder="Write a message, or drop a file here…"
+              aria-label="Write a message"
+              className="min-h-[140px] w-full resize-none border-0 bg-transparent p-3.5 text-[15px] leading-relaxed outline-none placeholder:text-muted-foreground"
+              onFocus={() => setEditorOpen(true)}
+            />
+          ) : null}
+          {(editorOpen || !editorEmpty) && (
+            <div className={file ? "hidden" : undefined}>
+              <RichTextEditor
+                ref={editorRef}
+                autoFocus={!file}
+                onEmptyChange={setEditorEmpty}
+                onBlurAway={() => {
+                  if (file) return;
+                  if (editorRef.current?.isEmpty() === false) return;
+                  setEditorOpen(false);
+                }}
+              />
+            </div>
           )}
-          <div className={file ? "hidden" : undefined}>
-            <RichTextEditor ref={editorRef} onEmptyChange={setEditorEmpty} />
-          </div>
           <div className="flex items-center justify-between gap-3 border-t border-border px-3.5 py-2.5">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-[10px] px-1.5 py-1 text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Paperclip className="size-4" strokeWidth={1.8} />
-              {file ? "Replace file" : "Attach a file"}
-            </button>
+            {file ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="size-4" strokeWidth={1.8} />
+                Replace file
+              </Button>
+            ) : (
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-[10px] px-1.5 py-1 text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="size-4" strokeWidth={1.8} />
+                Attach a file
+              </button>
+            )}
             <span className="truncate text-[12.5px] text-muted-foreground">
               {fileKind
                 ? `Sent as ${fileKind}`
-                : `Image, video or file · up to ${fileMaxLabel}`}
+                : editorOpen
+                  ? "Sent as text"
+                  : `Image, video or file · up to ${fileMaxLabel}`}
             </span>
             <input
               ref={fileInputRef}
