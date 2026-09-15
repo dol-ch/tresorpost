@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import QRCode from "qrcode";
 import { RichTextEditor, type EditorHandle } from "./Editor";
 import {
@@ -37,6 +37,16 @@ function kindNoun(kind: Exclude<SecretKind, "text">): string {
   if (kind === "image") return "Image";
   if (kind === "video") return "Video";
   return "File";
+}
+
+function dataTransferHasFiles(dt: DataTransfer | null): boolean {
+  if (!dt) return false;
+  if (dt.files.length > 0) return true;
+  return Array.from(dt.types).includes("Files");
+}
+
+function firstDroppedFile(dt: DataTransfer | null): File | null {
+  return dt?.files?.[0] ?? null;
 }
 
 function optionsSummary(opts: {
@@ -88,6 +98,18 @@ export function CreatePage() {
   const [composeDrag, setComposeDrag] = useState(false);
   const [editorEmpty, setEditorEmpty] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
+
+  useEffect(() => {
+    const blockBrowserFileOpen = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("dragover", blockBrowserFileOpen);
+    window.addEventListener("drop", blockBrowserFileOpen);
+    return () => {
+      window.removeEventListener("dragover", blockBrowserFileOpen);
+      window.removeEventListener("drop", blockBrowserFileOpen);
+    };
+  }, []);
 
   useEffect(() => {
     fetchConfig()
@@ -244,6 +266,38 @@ export function CreatePage() {
     if (next) setEditorOpen(false);
   }
 
+  function onComposeFileDrag(e: DragEvent) {
+    if (!dataTransferHasFiles(e.dataTransfer)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+    setComposeDrag(true);
+  }
+
+  function onComposeDragLeave(e: DragEvent) {
+    const next = e.relatedTarget as Node | null;
+    if (next && e.currentTarget.contains(next)) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    if (
+      e.clientX >= box.left &&
+      e.clientX <= box.right &&
+      e.clientY >= box.top &&
+      e.clientY <= box.bottom
+    ) {
+      return;
+    }
+    setComposeDrag(false);
+  }
+
+  function onComposeDrop(e: DragEvent) {
+    if (!dataTransferHasFiles(e.dataTransfer)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setComposeDrag(false);
+    const dropped = firstDroppedFile(e.dataTransfer);
+    if (dropped) takeFile(dropped);
+  }
+
   if (shareUrl) {
     return (
       <Card>
@@ -396,21 +450,16 @@ export function CreatePage() {
       <CardContent className="flex flex-col gap-[22px]">
         <div
           className={
-            composeDrag || (editorOpen && !file)
-              ? "overflow-hidden rounded-[14px] border-[1.5px] border-primary bg-card"
-              : "overflow-hidden rounded-[14px] border border-border bg-card"
+            composeDrag
+              ? "overflow-hidden rounded-[14px] border-[1.5px] border-dashed border-primary bg-primary/8"
+              : editorOpen && !file
+                ? "overflow-hidden rounded-[14px] border-[1.5px] border-primary bg-card"
+                : "overflow-hidden rounded-[14px] border border-border bg-card"
           }
-          onDragOver={(e) => {
-            e.preventDefault();
-            setComposeDrag(true);
-          }}
-          onDragLeave={() => setComposeDrag(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setComposeDrag(false);
-            const dropped = e.dataTransfer.files?.[0] ?? null;
-            if (dropped) takeFile(dropped);
-          }}
+          onDragEnterCapture={onComposeFileDrag}
+          onDragOverCapture={onComposeFileDrag}
+          onDragLeave={onComposeDragLeave}
+          onDropCapture={onComposeDrop}
         >
           {file ? (
             <div className="flex flex-col gap-3 px-4 py-4">

@@ -69,12 +69,32 @@ export const RichTextEditor = forwardRef<
         onEmptyChangeRef.current?.(empty);
         forceRender();
       },
+      handleDrop(_view, event) {
+        if (event.dataTransfer?.files?.length) {
+          event.preventDefault();
+          return true;
+        }
+        return false;
+      },
       handleDOMEvents: {
         blur(_view, event) {
           const next = event.relatedTarget as Node | null;
           if (next && wrapRef.current?.contains(next)) return false;
           onBlurAwayRef.current?.();
           return false;
+        },
+        dragover(_view, event) {
+          if (!Array.from(event.dataTransfer?.types ?? []).includes("Files")) {
+            return false;
+          }
+          event.preventDefault();
+          if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+          return true;
+        },
+        drop(_view, event) {
+          if (!event.dataTransfer?.files?.length) return false;
+          event.preventDefault();
+          return true;
         },
       },
     });
