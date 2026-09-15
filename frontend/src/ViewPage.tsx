@@ -499,7 +499,7 @@ function S3FileView({
                 ? playBlob
                   ? "Ready to play"
                   : "Downloaded"
-                : "Downloading & decrypting"}
+                : "Decrypting & downloading"}
               : {humanSize(Math.max(0, progress.done))} / {humanSize(progress.total)} (
               {progressPct(progress.done, progress.total)}%)
             </p>
@@ -516,7 +516,7 @@ function S3FileView({
               <Button onClick={onPlay}>{isImage ? "Decrypt & view" : "Decrypt & play"}</Button>
             )}
             <Button variant="secondary" onClick={onDownload}>
-              {isVideo ? "Download video" : isImage ? "Download image" : "Download & decrypt"}
+              {isVideo ? "Download video" : isImage ? "Download image" : "Decrypt & download"}
             </Button>
           </div>
         )}
