@@ -21,7 +21,7 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 dotenvy = "0.15.7"
 rand = "0.8"
-sha2 = "0.10"
+sha2 = "0.11"
 subtle = "2"
 base64 = "0.22"
 aws-config = { version = "1", features = ["behavior-version-latest"] }
