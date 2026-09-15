@@ -117,16 +117,14 @@ export function App() {
                   reaches the server, which stores nothing but ciphertext.
                 </p>
                 <p className="mb-5 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
-                  Swiss domain, Swiss storage, no analytics. The service is
-                  sovereign: hosted in Switzerland, and stored secrets do not
-                  leave the country.
+                  Swiss storage, no analytics. The service is sovereign: hosted
+                  in Switzerland, and stored secrets do not leave the country.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary">XChaCha20-Poly1305</Badge>
                   <Badge variant="secondary">256-bit · quantum-safe</Badge>
                   <Badge variant="secondary">Zero-knowledge server</Badge>
                   <Badge variant="secondary">No analytics</Badge>
-                  <Badge variant="secondary">Swiss .ch</Badge>
                   <Badge variant="secondary" className="gap-1.5">
                     <SwissFlag />
                     Hosted in Switzerland
@@ -159,7 +157,7 @@ export function App() {
 
         <footer className="mt-9 border-t border-border pt-5">
           <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted-foreground">
-            <span>Swiss .ch · no analytics · hosted in Switzerland</span>
+            <span>No analytics · hosted in Switzerland</span>
             <span className="flex flex-wrap items-center gap-3">
               {brand.footerLinks.map((l) => (
                 <a key={l.href} href={l.href} target="_blank" rel="noreferrer">

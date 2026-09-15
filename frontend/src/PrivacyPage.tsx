@@ -57,7 +57,7 @@ export function PrivacyPage() {
         </h1>
         <p className="max-w-[48ch] text-[17px] leading-snug text-muted-foreground">
           Short version: the server holds ciphertext it cannot read, and forgets it
-          on schedule. Swiss domain, Swiss storage, no analytics.
+          on schedule. Swiss storage, no analytics.
         </p>
       </section>
 
@@ -84,7 +84,6 @@ export function PrivacyPage() {
           <div>
             <Kicker className="mb-2.5">Sovereign</Kicker>
             <div className="flex flex-col gap-2">
-              <CheckRow>Swiss .ch domain</CheckRow>
               <CheckRow>App and object storage in Zurich</CheckRow>
               <CheckRow>No analytics, trackers or ad networks</CheckRow>
             </div>
@@ -96,11 +95,10 @@ export function PrivacyPage() {
         <CardContent className="flex flex-col gap-3.5">
           <Kicker>Switzerland</Kicker>
           <p className="text-[14.5px] leading-relaxed text-muted-foreground">
-            tresorpost.ch is a Swiss domain. The application and object storage
-            run in Zurich. There is no analytics and no third-country replica of
-            ciphertext. Delivering a note still sends it to the recipient's
-            browser. Emailing a share link uses SMTP, which is separate from this
-            hosting.
+            The application and object storage run in Zurich. There is no
+            analytics and no third-country replica of ciphertext. Delivering a
+            note still sends it to the recipient's browser. Emailing a share
+            link uses SMTP, which is separate from this hosting.
           </p>
         </CardContent>
       </Card>

@@ -89,7 +89,7 @@ export function FaqPage() {
           <div className="h-px bg-border" />
           <Qa
             q="Where is this hosted?"
-            a="Sovereign Swiss infrastructure: tresorpost.ch is a Swiss domain, the app and object storage run in Zurich, and there is no analytics. Ciphertext is not replicated outside the country. Opening a link still delivers it to the recipient's device, wherever they are. Emailing a share URL sends that message through SMTP (see above)."
+            a="Sovereign Swiss infrastructure: the app and object storage run in Zurich, and there is no analytics. Ciphertext is not replicated outside the country. Opening a link still delivers it to the recipient's device, wherever they are. Emailing a share URL sends that message through SMTP (see above)."
           />
         </CardContent>
       </Card>
