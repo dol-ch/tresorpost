@@ -7,19 +7,18 @@
 use std::net::SocketAddr;
 
 use axum::{
+    Json,
     extract::{ConnectInfo, State},
     http::HeaderMap,
     http::StatusCode,
-    Json,
 };
 use lettre::{
-    message::Mailbox,
+    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor, message::Mailbox,
     transport::smtp::authentication::Credentials,
-    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::common::{err, ApiError, AppState, ID_LEN, MAX_EXPIRES, MIN_EXPIRES};
+use crate::common::{ApiError, AppState, ID_LEN, MAX_EXPIRES, MIN_EXPIRES, err};
 
 const SUBJECT: &str = "You were sent a secure message";
 const MAX_EMAIL_LEN: usize = 254;
@@ -127,11 +126,8 @@ pub(crate) async fn send_share_email(
     if url.len() > MAX_URL_LEN || !looks_like_share_url(url) {
         return Err(err(StatusCode::BAD_REQUEST, "invalid share link"));
     }
-    let origin = request_origin(&headers);
-    if let Some(origin) = origin.as_deref() {
-        if !share_origin_ok(url, origin) {
-            return Err(err(StatusCode::BAD_REQUEST, "invalid share link"));
-        }
+    if !share_url_allowed(url, &headers) {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid share link"));
     }
 
     let expires_in = req.expires_in.clamp(MIN_EXPIRES, MAX_EXPIRES);
@@ -178,7 +174,8 @@ pub(crate) fn looks_like_share_url(url: &str) -> bool {
     let Some((_, frag)) = url.split_once('#') else {
         return false;
     };
-    let path = frag.trim_start_matches('/');
+    let decoded = percent_decode(frag);
+    let path = decoded.trim_start_matches('/');
     let mut parts = path.split('/');
     if parts.next() != Some("v") {
         return false;
@@ -190,44 +187,118 @@ pub(crate) fn looks_like_share_url(url: &str) -> bool {
         return false;
     };
     id.len() == ID_LEN
-        && id
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric())
+        && id.chars().all(|c| c.is_ascii_alphanumeric())
         && key.len() >= 16
         && key
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
-pub(crate) fn share_origin_ok(url: &str, origin: &str) -> bool {
-    let origin = origin.trim().trim_end_matches('/');
-    if origin.is_empty() {
-        return false;
+fn percent_decode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let b = s.as_bytes();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' && i + 2 < b.len() {
+            if let Ok(c) =
+                u8::from_str_radix(std::str::from_utf8(&b[i + 1..i + 3]).unwrap_or(""), 16)
+            {
+                out.push(c as char);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(b[i] as char);
+        i += 1;
     }
-    url.starts_with(&format!("{origin}/#/")) || url.starts_with(&format!("{origin}#/"))
+    out
 }
 
-fn request_origin(headers: &HeaderMap) -> Option<String> {
-    if let Some(explicit) = std::env::var("PUBLIC_URL")
-        .ok()
-        .map(|s| s.trim().trim_end_matches('/').to_string())
-        .filter(|s| !s.is_empty())
-    {
-        return Some(explicit);
+fn origin_host(s: &str) -> Option<String> {
+    let s = s.trim();
+    let rest = s
+        .strip_prefix("https://")
+        .or_else(|| s.strip_prefix("http://"))?;
+    let hostport = rest.split(['/', '?', '#']).next().unwrap_or(rest);
+    let host = hostport
+        .split(':')
+        .next()
+        .unwrap_or(hostport)
+        .to_ascii_lowercase();
+    if host.is_empty() {
+        return None;
     }
-    let host = headers
+    Some(host.strip_prefix("www.").unwrap_or(&host).to_string())
+}
+
+fn is_loopback_host(host: &str) -> bool {
+    matches!(host, "localhost" | "127.0.0.1" | "::1") || host.starts_with("127.")
+}
+
+/// Accept the share URL if its host matches PUBLIC_URL, the browser Origin,
+/// X-Forwarded-Host, or Host. Loopback Host (docker/nginx to 127.0.0.1:7777)
+/// is ignored so it does not reject https://tresorpost.ch links.
+pub(crate) fn share_url_allowed(url: &str, headers: &HeaderMap) -> bool {
+    let Some(url_host) = origin_host(url) else {
+        return false;
+    };
+    if is_loopback_host(&url_host) {
+        return false;
+    }
+    let allowed = allowed_hosts(headers);
+    if allowed.is_empty() {
+        // nginx → 127.0.0.1:7777 often has no public Host. The fragment shape is
+        // already checked; do not compare against loopback.
+        return true;
+    }
+    allowed.iter().any(|h| h == &url_host)
+}
+
+fn allowed_hosts(headers: &HeaderMap) -> Vec<String> {
+    let mut out = Vec::new();
+    let push = |out: &mut Vec<String>, raw: &str| {
+        if let Some(h) = origin_host(raw).or_else(|| {
+            let h = raw
+                .split(['/', ',', ':'])
+                .next()
+                .unwrap_or(raw)
+                .trim()
+                .trim_matches('"')
+                .to_ascii_lowercase();
+            let h = h.strip_prefix("www.").unwrap_or(&h).to_string();
+            if h.is_empty() || is_loopback_host(&h) {
+                None
+            } else {
+                Some(h)
+            }
+        }) {
+            if !is_loopback_host(&h) && !out.contains(&h) {
+                out.push(h);
+            }
+        }
+    };
+    if let Some(explicit) = std::env::var("PUBLIC_URL").ok() {
+        push(&mut out, explicit.trim());
+    }
+    if let Some(origin) = headers.get("origin").and_then(|v| v.to_str().ok()) {
+        push(&mut out, origin);
+    }
+    if let Some(referer) = headers.get("referer").and_then(|v| v.to_str().ok()) {
+        push(&mut out, referer);
+    }
+    if let Some(xfh) = headers
         .get("x-forwarded-host")
-        .or_else(|| headers.get(axum::http::header::HOST))
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.split(',').next().unwrap_or(s).trim().to_string())
-        .filter(|s| !s.is_empty())?;
-    let proto = headers
-        .get("x-forwarded-proto")
+    {
+        push(&mut out, xfh.split(',').next().unwrap_or(xfh).trim());
+    }
+    if let Some(host) = headers
+        .get(axum::http::header::HOST)
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.split(',').next().unwrap_or(s).trim())
-        .filter(|s| *s == "http" || *s == "https")
-        .unwrap_or("https");
-    Some(format!("{proto}://{host}"))
+    {
+        push(&mut out, host);
+    }
+    out
 }
 
 pub(crate) fn human_ttl(secs: i64) -> String {
@@ -301,17 +372,32 @@ mod tests {
     }
 
     #[test]
-    fn share_url_shape() {
-        let url = "https://tresorpost.example/#/v/abcdefghijkl/ABCDEFGHIJKLMNOPQRSTUV";
+    fn share_url_ignores_loopback_host() {
+        let url = "https://tresorpost.ch/#/v/abcdefghijkl/ABCDEFGHIJKLMNOPQRSTUV";
+        let mut headers = HeaderMap::new();
+        headers.insert("host", "127.0.0.1:7777".parse().unwrap());
         assert!(looks_like_share_url(url));
-        assert!(share_origin_ok(url, "https://tresorpost.example"));
-        assert!(!share_origin_ok(url, "https://evil.example"));
-        assert!(!looks_like_share_url("https://tresorpost.example/#/d/abcdefghijkl/token"));
+        assert!(share_url_allowed(url, &headers));
+        headers.insert("origin", "https://tresorpost.ch".parse().unwrap());
+        assert!(share_url_allowed(url, &headers));
+        assert!(!looks_like_share_url(
+            "https://tresorpost.ch/#/d/abcdefghijkl/notakeynotakey"
+        ));
+        assert!(looks_like_share_url(
+            "https://tresorpost.ch/#/v/abcdefghijkl/ABCDEFGHIJKLMNOPQRSTUV/delTokendelToken"
+        ));
+        let mut evil = HeaderMap::new();
+        evil.insert("origin", "https://evil.example".parse().unwrap());
+        assert!(!share_url_allowed(url, &evil));
     }
 
     #[test]
     fn body_mentions_destruct() {
-        let b = email_body("https://x/#/v/abcdefghijkl/ABCDEFGHIJKLMNOPQRSTUV", 3600, Some(1));
+        let b = email_body(
+            "https://x/#/v/abcdefghijkl/ABCDEFGHIJKLMNOPQRSTUV",
+            3600,
+            Some(1),
+        );
         assert!(b.contains("self-destruct after 1 hour"));
         assert!(b.contains("at most 1 time"));
         assert!(b.contains("You were sent a secure message"));

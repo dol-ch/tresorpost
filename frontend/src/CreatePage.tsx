@@ -220,7 +220,7 @@ export function CreatePage() {
   if (shareUrl) {
     return (
       <Card>
-        <CardContent className="flex flex-col gap-4.5">
+        <CardContent className="flex flex-col gap-3">
           <Kicker>Share</Kicker>
           <h2 className="-mt-1 font-heading text-2xl font-bold tracking-tight">
             Your encrypted link is ready
@@ -246,33 +246,32 @@ export function CreatePage() {
           )}
 
           <Input readOnly value={shareUrl} className="font-mono text-[13px]" />
-          <Button
-            type="button"
-            onClick={async () => {
-              if (await copyText(shareUrl)) {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              }
-            }}
-          >
-            {copied ? "Copied" : "Copy link"}
-          </Button>
-          <Button variant="secondary" asChild>
-            <a href={shareUrl} target="_blank" rel="noreferrer">
-              Open link
-            </a>
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              className="min-w-0 flex-1"
+              type="button"
+              onClick={async () => {
+                if (await copyText(shareUrl)) {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }
+              }}
+            >
+              {copied ? "Copied" : "Copy"}
+            </Button>
+            <Button variant="secondary" className="min-w-0 flex-1" asChild>
+              <a href={shareUrl} target="_blank" rel="noreferrer">
+                Open
+              </a>
+            </Button>
+          </div>
 
           {emailEnabled && (
             <>
-              <div className="mt-1 h-px bg-border" />
+              <div className="mt-0.5 h-px bg-border" />
               <Kicker>Email this link</Kicker>
-              <p className="-mt-3 text-[13.5px] text-muted-foreground">
-                Send the same link by email. It will self-destruct after the
-                timer you chose.
-              </p>
               <form
-                className="flex flex-col gap-2.5"
+                className="flex flex-col gap-2"
                 onSubmit={async (e) => {
                   e.preventDefault();
                   if (!shareUrl || emailBusy) return;
@@ -295,67 +294,69 @@ export function CreatePage() {
                   }
                 }}
               >
-                <Input
-                  type="email"
-                  autoComplete="email"
-                  required
-                  placeholder="recipient@example.com"
-                  value={emailTo}
-                  disabled={emailBusy}
-                  onChange={(e) => setEmailTo(e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    autoComplete="email"
+                    required
+                    placeholder="name@email.com"
+                    value={emailTo}
+                    disabled={emailBusy}
+                    onChange={(e) => setEmailTo(e.target.value)}
+                    className="min-w-0 flex-1"
+                  />
+                  <Button type="submit" className="shrink-0 px-4" disabled={emailBusy}>
+                    {emailBusy ? "Sending…" : "Send"}
+                  </Button>
+                </div>
                 {emailError && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{emailError}</AlertDescription>
-                  </Alert>
+                  <p className="text-[13px] text-destructive">{emailError}</p>
                 )}
                 {emailSent && !emailError && (
-                  <p className="text-[13.5px] text-muted-foreground">Sent. You can email someone else.</p>
+                  <p className="text-[13px] text-muted-foreground">Sent.</p>
                 )}
-                <Button type="submit" variant="secondary" disabled={emailBusy}>
-                  {emailBusy ? "Sending…" : "Send email"}
-                </Button>
               </form>
             </>
           )}
 
           {deleteUrl && (
             <>
-              <div className="mt-1 h-px bg-border" />
-              <Kicker>Keep this to delete the note</Kicker>
-              <p className="-mt-3 text-[13.5px] text-muted-foreground">
-                Do not send this with the share link — anyone holding it can
-                destroy the note before it is opened.
+              <div className="mt-0.5 h-px bg-border" />
+              <Kicker>Delete this note</Kicker>
+              <p className="-mt-3 text-[13px] text-muted-foreground">
+                Keep this private — it destroys the ciphertext before anyone opens it.
               </p>
               <Input readOnly value={deleteUrl} className="font-mono text-[13px]" />
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={async () => {
-                  if (await copyText(deleteUrl)) {
-                    setCopiedDelete(true);
-                    setTimeout(() => setCopiedDelete(false), 1500);
-                  }
-                }}
-              >
-                {copiedDelete ? "Copied" : "Copy delete link"}
-              </Button>
-              <Button variant="secondary" className="text-destructive" asChild>
-                <a href={deleteUrl}>Delete this note</a>
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  className="min-w-0 flex-1"
+                  type="button"
+                  onClick={async () => {
+                    if (await copyText(deleteUrl)) {
+                      setCopiedDelete(true);
+                      setTimeout(() => setCopiedDelete(false), 1500);
+                    }
+                  }}
+                >
+                  {copiedDelete ? "Copied" : "Copy"}
+                </Button>
+                <Button variant="destructive" className="min-w-0 flex-1" asChild>
+                  <a href={deleteUrl}>Delete</a>
+                </Button>
+              </div>
             </>
           )}
 
-          <Button
-            variant="secondary"
+          <button
             type="button"
+            className="mt-1 text-center text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
             onClick={() => {
               reset();
               setFile(null);
             }}
           >
             Create another
-          </Button>
+          </button>
         </CardContent>
       </Card>
     );
