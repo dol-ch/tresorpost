@@ -57,7 +57,7 @@ export function PrivacyPage() {
         </h1>
         <p className="max-w-[48ch] text-[17px] leading-snug text-muted-foreground">
           Short version: the server holds ciphertext it cannot read, and forgets it
-          on schedule.
+          on schedule. This instance is hosted 100% in Switzerland.
         </p>
       </section>
 
@@ -80,6 +80,18 @@ export function PrivacyPage() {
               <CrossRow>Recipient addresses — email is handed to SMTP and not stored</CrossRow>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4">
+        <CardContent className="flex flex-col gap-3.5">
+          <Kicker>Switzerland</Kicker>
+          <p className="text-[14.5px] leading-relaxed text-muted-foreground">
+            The application and object storage run in Zurich. Stored secrets stay
+            in Switzerland — they are not copied to other countries. Delivering a
+            note still sends ciphertext to the recipient's browser. Emailing a
+            share link uses SMTP, which is separate from this hosting.
+          </p>
         </CardContent>
       </Card>
 

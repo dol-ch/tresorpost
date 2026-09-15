@@ -7,6 +7,7 @@ import { AdminPage } from "./AdminPage";
 import { FaqPage } from "./FaqPage";
 import { PrivacyPage } from "./PrivacyPage";
 import { brand } from "./brand";
+import { SwissFlag } from "./brand/default/SwissFlag";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Kicker } from "@/components/kit";
@@ -107,15 +108,23 @@ export function App() {
                 <h1 className="mb-3.5 font-heading text-[clamp(27px,7.6vw,40px)] leading-[1.1] font-extrabold tracking-tight text-balance">
                   Share a secret only the recipient can read.
                 </h1>
-                <p className="mb-5 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
+                <p className="mb-3 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
                   Text, images, video and files are encrypted in your browser and
                   decrypted in theirs. The key lives only in the link — it never
                   reaches the server, which stores nothing but ciphertext.
+                </p>
+                <p className="mb-5 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
+                  Hosted 100% in Switzerland. Stored secrets do not leave the
+                  country.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary">XChaCha20-Poly1305</Badge>
                   <Badge variant="secondary">256-bit · quantum-safe</Badge>
                   <Badge variant="secondary">Zero-knowledge server</Badge>
+                  <Badge variant="secondary" className="gap-1.5">
+                    <SwissFlag />
+                    Hosted in Switzerland
+                  </Badge>
                 </div>
               </section>
               <CreatePage />
@@ -137,7 +146,7 @@ export function App() {
 
         <footer className="mt-9 border-t border-border pt-5">
           <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted-foreground">
-            <span>Zero-knowledge · keys stay in the URL fragment</span>
+            <span>Hosted in Switzerland · keys stay in the URL fragment</span>
             <span className="flex flex-wrap items-center gap-3">
               {brand.footerLinks.map((l) => (
                 <a key={l.href} href={l.href} target="_blank" rel="noreferrer">

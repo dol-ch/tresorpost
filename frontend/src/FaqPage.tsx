@@ -86,6 +86,11 @@ export function FaqPage() {
             q="Can I email the link?"
             a="If the operator enabled SMTP, yes — after creating a note you can send the share URL. That message includes the key in the link, so the mail provider can see it. Limited to 3 sends per minute per IP."
           />
+          <div className="h-px bg-border" />
+          <Qa
+            q="Where is this hosted?"
+            a="100% in Switzerland: the app and object storage run in Zurich. Ciphertext is not replicated outside the country. Opening a link still delivers it to the recipient's device, wherever they are. Emailing a share URL sends that message through SMTP (see above)."
+          />
         </CardContent>
       </Card>
 
