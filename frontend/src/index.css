@@ -150,6 +150,9 @@
   html {
     @apply font-sans;
     }
+  h1, h2 {
+    @apply font-heading;
+    }
 }
 
 .editor-host .ProseMirror {

@@ -56,8 +56,9 @@ Keep a **private** repository/fork that adds `frontend/src/brand/private/`:
    declarations and `:root` / `.dark` token overrides (shadcn variables).
 3. Create `frontend/src/brand/private/index.tsx` exporting a `Brand`
    (name, tagline, `Wordmark`, footer links).
-4. Optional: add `favicon.svg` / `favicon.ico` / `apple-touch-icon.png` next to
-   that file if the tab icon should not be the default Tresorpost padlock.
+4. Optional: add `favicon.svg` / `favicon.ico` / `apple-touch-icon.png` /
+   `og.png` next to that file if the tab icon or Open Graph card should not be
+   the public Tresorpost defaults.
 5. Build normally — the overlay is picked up automatically.
 
 Because the overlay is a self-contained folder, staying in sync with the public
