@@ -185,15 +185,10 @@ export function App() {
                 <h1 className="mb-3.5 font-heading text-[clamp(27px,7.6vw,40px)] leading-[1.1] font-extrabold tracking-tight text-balance">
                   Send encrypted files and secrets only the recipient can read.
                 </h1>
-                <p className="mb-3 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
-                  End-to-end encrypted, burn-after-reading transfer for text, images,
-                  video and files — passwords, PDFs, one-time notes. Encryption happens
-                  in your browser; decryption in theirs. The key lives only in the
-                  link — it never reaches the server, which stores nothing but ciphertext.
-                </p>
                 <p className="mb-5 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
-                  Swiss storage, no analytics. The service is sovereign: hosted
-                  in Switzerland, and stored secrets do not leave the country.
+                  Encrypted in your browser, burned after reading. The key stays
+                  in the link — the server never sees it. Hosted in Switzerland,
+                  no analytics.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary">XChaCha20-Poly1305</Badge>
