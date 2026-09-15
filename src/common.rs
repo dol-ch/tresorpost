@@ -112,6 +112,8 @@ pub(crate) struct AppState {
     pub(crate) s3: Option<S3Backend>,
     pub(crate) create_limiter: crate::rate::CreateLimiter,
     pub(crate) read_limiter: crate::rate::ReadLimiter,
+    pub(crate) email_limiter: crate::rate::EmailLimiter,
+    pub(crate) mailer: Option<crate::mail::Mailer>,
     pub(crate) admin_auth_limiter: crate::rate::AdminAuthLimiter,
     /// 0 = unlimited.
     pub(crate) max_sqlite_bytes: u64,

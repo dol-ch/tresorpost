@@ -27,6 +27,10 @@ pub(crate) const DEFAULT_READ_RATE_WINDOW_SECS: u64 = 3600;
 pub(crate) const DEFAULT_ADMIN_AUTH_MAX_FAILURES: u32 = 10;
 pub(crate) const DEFAULT_ADMIN_AUTH_WINDOW_SECS: u64 = 3600;
 
+/// Default: 3 share emails per IP per minute. `EMAIL_RATE_LIMIT=0` disables.
+pub(crate) const DEFAULT_EMAIL_RATE_LIMIT: u32 = 3;
+pub(crate) const DEFAULT_EMAIL_RATE_WINDOW_SECS: u64 = 60;
+
 #[derive(Clone)]
 pub(crate) struct Limiter {
     max: u32,
@@ -118,6 +122,37 @@ impl CreateLimiter {
             "CREATE_RATE_WINDOW_SECS",
             DEFAULT_CREATE_RATE_LIMIT,
             DEFAULT_CREATE_RATE_WINDOW_SECS,
+        ))
+    }
+
+    pub(crate) fn disabled(&self) -> bool {
+        self.0.disabled()
+    }
+
+    pub(crate) fn max(&self) -> u32 {
+        self.0.max()
+    }
+
+    pub(crate) fn window_secs(&self) -> u64 {
+        self.0.window_secs()
+    }
+
+    pub(crate) fn check(&self, ip: IpAddr) -> Result<(), u64> {
+        self.0.check(ip)
+    }
+}
+
+/// POST `/api/share-email` limiter.
+#[derive(Clone)]
+pub(crate) struct EmailLimiter(Limiter);
+
+impl EmailLimiter {
+    pub(crate) fn from_env() -> Self {
+        Self(Limiter::from_env(
+            "EMAIL_RATE_LIMIT",
+            "EMAIL_RATE_WINDOW_SECS",
+            DEFAULT_EMAIL_RATE_LIMIT,
+            DEFAULT_EMAIL_RATE_WINDOW_SECS,
         ))
     }
 
@@ -290,6 +325,18 @@ pub(crate) fn enforce_create_limit(
 ) -> Result<(), (StatusCode, Json<ApiError>)> {
     let ip = client_ip(headers, peer.0);
     match state.create_limiter.check(ip) {
+        Ok(()) => Ok(()),
+        Err(secs) => Err(too_many(secs)),
+    }
+}
+
+pub(crate) fn enforce_email_limit(
+    state: &AppState,
+    headers: &HeaderMap,
+    peer: ConnectInfo<SocketAddr>,
+) -> Result<(), (StatusCode, Json<ApiError>)> {
+    let ip = client_ip(headers, peer.0);
+    match state.email_limiter.check(ip) {
         Ok(()) => Ok(()),
         Err(secs) => Err(too_many(secs)),
     }

@@ -13,7 +13,7 @@ import {
   type SecretKind,
   type SecretPayload,
 } from "./payload";
-import { createSecret, fetchConfig } from "./api";
+import { createSecret, fetchConfig, sendShareEmail } from "./api";
 import { uploadLargeFile } from "./largeFile";
 import { EXPIRY_OPTIONS, MAX_FILE_BYTES, humanSize } from "./options";
 import { copyText } from "./clipboard";
@@ -59,6 +59,11 @@ export function CreatePage() {
   const [maxS3FileBytes, setMaxS3FileBytes] = useState<number>(0);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   const editorRef = useRef<EditorHandle>(null);
 
@@ -68,6 +73,7 @@ export function CreatePage() {
         if (cfg.max_file_bytes > 0) setMaxFileBytes(cfg.max_file_bytes);
         setS3Enabled(cfg.s3_enabled);
         setMaxS3FileBytes(cfg.max_s3_file_bytes);
+        setEmailEnabled(Boolean(cfg.email_enabled));
       })
       .catch(() => {
         /* keep the default limit if config is unavailable */
@@ -105,6 +111,10 @@ export function CreatePage() {
     setError(null);
     setCopied(false);
     setCopiedDelete(false);
+    setEmailTo("");
+    setEmailBusy(false);
+    setEmailError(null);
+    setEmailSent(false);
   }
 
   async function buildPayload(): Promise<SecretPayload> {
@@ -262,6 +272,57 @@ export function CreatePage() {
           >
             Create another
           </Button>
+
+          {emailEnabled && (
+            <>
+              <div className="mt-1 h-px bg-border" />
+              <Kicker>Email this link</Kicker>
+              <p className="-mt-3 text-[13.5px] text-muted-foreground">
+                They get the same link, plus when it self-destructs. The key
+                is in the URL, so the mail server will see it.
+              </p>
+              <form
+                className="flex flex-col gap-2.5"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!shareUrl || emailBusy || emailSent) return;
+                  setEmailBusy(true);
+                  setEmailError(null);
+                  try {
+                    await sendShareEmail({
+                      to: emailTo.trim(),
+                      url: shareUrl,
+                      expires_in: expiresIn,
+                      max_views: limitViews ? maxViews : null,
+                    });
+                    setEmailSent(true);
+                  } catch (err) {
+                    setEmailError(err instanceof Error ? err.message : String(err));
+                  } finally {
+                    setEmailBusy(false);
+                  }
+                }}
+              >
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="recipient@example.com"
+                  value={emailTo}
+                  disabled={emailBusy || emailSent}
+                  onChange={(e) => setEmailTo(e.target.value)}
+                />
+                {emailError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{emailError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" variant="secondary" disabled={emailBusy || emailSent}>
+                  {emailSent ? "Sent" : emailBusy ? "Sending…" : "Send email"}
+                </Button>
+              </form>
+            </>
+          )}
 
           {deleteUrl && (
             <>

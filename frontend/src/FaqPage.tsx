@@ -80,7 +80,12 @@ export function FaqPage() {
             a="Yes — keep the private delete link you get after creating a note, and destroy it at any time."
           />
           <div className="h-px bg-border" />
-          <Qa q="Do I need an account?" a="No. There is no sign-up, no email, no tracking cookie." />
+          <Qa q="Do I need an account?" a="No. There is no sign-up and no tracking cookie." />
+          <div className="h-px bg-border" />
+          <Qa
+            q="Can I email the link?"
+            a="If the operator enabled SMTP, yes — after creating a note you can send the share URL. That message includes the key in the link, so the mail provider can see it. Limited to 3 sends per minute per IP."
+          />
         </CardContent>
       </Card>
 

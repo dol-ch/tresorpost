@@ -66,7 +66,8 @@ The server exposes a tiny API and, in production, serves the built SPA:
 - `DELETE /api/secrets/{id}` — destroy with `{ delete_token }` (creator **or** recipient token). Same `404` for unknown id or wrong token. `503` if the S3 object could not be deleted (row is kept so a retry can finish). `429` if the per-IP read limit is exceeded.
 - `GET  /api/secrets/{id}` — atomically consumes one view; returns ciphertext (SQLite) **or** a presigned download URL (S3), or `404` when expired/exhausted.
 - `DELETE /api/secrets/{id}` — destroy with `{ delete_token }` (creator **or** recipient token). Same `404` for unknown id or wrong token.
-- `GET  /api/config` — `{ max_file_bytes, s3_enabled, max_s3_file_bytes }`.
+- `GET  /api/config` — `{ max_file_bytes, s3_enabled, max_s3_file_bytes, email_enabled }`.
+- `POST /api/share-email` — `{ to, url, expires_in, max_views }` sends the share link over SMTP. `429` if the per-IP email limit is exceeded. `503` if SMTP is not configured.
 - `GET  /api/health` — liveness.
 - `POST /api/uploads/init` — begin an S3 multipart upload (large files). `429` if the create rate limit is exceeded; `507` if `MAX_S3_GB` (or SQLite cap) would be exceeded.
 - `POST /api/uploads/{id}/part-url` — presigned PUT URL for one encrypted chunk.
@@ -200,6 +201,14 @@ present — copy `.env.example` to `.env`):
 | `ADMIN_TOKEN`           | _(unset)_      | Enables `#/admin` and `/api/admin/*`. Generate with `openssl rand -hex 32`. |
 | `ADMIN_AUTH_MAX_FAILURES` | `10`         | Failed admin logins per IP per window. `0` disables.           |
 | `ADMIN_AUTH_WINDOW_SECS` | `3600`        | Admin-auth failure window in seconds.                          |
+| `SMTP_HOST`               | `smtp.mailgun.org` | SMTP server for optional “email this link”.                |
+| `SMTP_PORT`               | `2525`         | SMTP port (Mailgun STARTTLS).                                  |
+| `SMTP_USERNAME`           | _(unset)_      | SMTP user (`MAILGUN_SMTP_LOGIN` also works). Empty = email UI off. |
+| `SMTP_PASSWORD`           | _(unset)_      | SMTP password (`MAILGUN_SMTP_PASSWORD` also works).            |
+| `SMTP_FROM`               | _(unset)_      | From mailbox, e.g. `Tresorpost <noreply@mg.example.com>`.      |
+| `PUBLIC_URL`              | _(unset)_      | Canonical site origin; share emails must use this host.        |
+| `EMAIL_RATE_LIMIT`        | `3`            | Max share emails per IP per window. `0` disables.              |
+| `EMAIL_RATE_WINDOW_SECS`  | `60`           | Share-email rate-limit window (default 1 minute).              |
 | `PORT`                  | `3000`         | HTTP port.                                                     |
 | `DATABASE_PATH`         | `db/data.db`   | SQLite database file path.                                     |
 | `STATIC_DIR`            | `frontend/dist`| Built frontend directory to serve.                             |

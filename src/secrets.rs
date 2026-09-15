@@ -27,6 +27,8 @@ pub(crate) struct ConfigResp {
     /// Maximum raw file size in bytes for the S3 path (only meaningful when
     /// `s3_enabled` is true).
     max_s3_file_bytes: i64,
+    /// When true, the create-success screen may email the share link via SMTP.
+    email_enabled: bool,
 }
 
 /// Public runtime config so the frontend enforces the same limit as the server
@@ -36,6 +38,7 @@ pub(crate) async fn config(State(state): State<AppState>) -> Json<ConfigResp> {
         max_file_bytes: state.max_file_bytes,
         s3_enabled: state.s3.is_some(),
         max_s3_file_bytes: state.s3.as_ref().map(|s| s.max_file_bytes).unwrap_or(0),
+        email_enabled: state.mailer.is_some(),
     })
 }
 

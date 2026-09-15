@@ -62,12 +62,35 @@ export interface AppConfig {
   max_file_bytes: number;
   s3_enabled: boolean;
   max_s3_file_bytes: number;
+  email_enabled?: boolean;
 }
 
 export async function fetchConfig(): Promise<AppConfig> {
   const res = await fetch("/api/config");
   if (!res.ok) throw new Error(`request failed (${res.status})`);
   return (await res.json()) as AppConfig;
+}
+
+export async function sendShareEmail(input: {
+  to: string;
+  url: string;
+  expires_in: number;
+  max_views: number | null;
+}): Promise<void> {
+  const res = await fetch("/api/share-email", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (res.ok) return;
+  const msg = await res.json().catch(() => ({ error: res.statusText }));
+  if (res.status === 429) {
+    throw new Error(msg.error || "Too many emails. Wait a minute and try again.");
+  }
+  if (res.status === 503) {
+    throw new Error("Email sending is not configured on this server.");
+  }
+  throw new Error(msg.error || `request failed (${res.status})`);
 }
 
 /** Public all-time aggregates. No tokens, ids, or ciphertext. */

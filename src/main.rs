@@ -17,6 +17,7 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 mod admin;
 mod common;
 mod db;
+mod mail;
 mod rate;
 mod s3;
 mod secrets;
@@ -128,6 +129,24 @@ async fn main() {
         );
     }
 
+    let email_limiter = rate::EmailLimiter::from_env();
+    if email_limiter.disabled() {
+        tracing::info!("share-email rate limit disabled (EMAIL_RATE_LIMIT=0)");
+    } else {
+        tracing::info!(
+            max = email_limiter.max(),
+            window_secs = email_limiter.window_secs(),
+            "share-email rate limit enabled"
+        );
+    }
+
+    let mailer = mail::Mailer::from_env();
+    if mailer.is_some() {
+        tracing::info!("share-email SMTP enabled");
+    } else {
+        tracing::info!("share-email SMTP not configured — email UI disabled");
+    }
+
     let admin_auth_limiter = rate::AdminAuthLimiter::from_env();
     if admin_auth_limiter.disabled() {
         tracing::info!("admin auth failure limit disabled (ADMIN_AUTH_MAX_FAILURES=0)");
@@ -148,6 +167,8 @@ async fn main() {
         s3,
         create_limiter,
         read_limiter,
+        email_limiter,
+        mailer,
         admin_auth_limiter,
         max_sqlite_bytes,
         max_s3_bytes,
@@ -159,6 +180,7 @@ async fn main() {
         .route("/config", get(secrets::config))
         .route("/stats", get(secrets::public_stats))
         .route("/secrets", post(secrets::create_secret))
+        .route("/share-email", post(mail::send_share_email))
         .route("/secrets/{id}", get(secrets::read_secret).delete(secrets::delete_secret))
         .route("/uploads/init", post(uploads::upload_init))
         .route("/uploads/{id}/part-url", post(uploads::upload_part_url))
