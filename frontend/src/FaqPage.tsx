@@ -80,7 +80,7 @@ export function FaqPage() {
             a="Yes — keep the private delete link you get after creating a note, and destroy it at any time."
           />
           <div className="h-px bg-border" />
-          <Qa q="Do I need an account?" a="No. There is no sign-up and no tracking cookie." />
+          <Qa q="Do I need an account?" a="No. There is no sign-up, no analytics and no tracking cookie." />
           <div className="h-px bg-border" />
           <Qa
             q="Can I email the link?"
@@ -89,7 +89,7 @@ export function FaqPage() {
           <div className="h-px bg-border" />
           <Qa
             q="Where is this hosted?"
-            a="100% in Switzerland: the app and object storage run in Zurich. Ciphertext is not replicated outside the country. Opening a link still delivers it to the recipient's device, wherever they are. Emailing a share URL sends that message through SMTP (see above)."
+            a="Sovereign Swiss infrastructure: tresorpost.ch is a Swiss domain, the app and object storage run in Zurich, and there is no analytics. Ciphertext is not replicated outside the country. Opening a link still delivers it to the recipient's device, wherever they are. Emailing a share URL sends that message through SMTP (see above)."
           />
         </CardContent>
       </Card>
