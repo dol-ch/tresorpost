@@ -63,6 +63,7 @@ export function CreatePage() {
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [emailEnabled, setEmailEnabled] = useState(false);
 
   const editorRef = useRef<EditorHandle>(null);
 
@@ -72,6 +73,7 @@ export function CreatePage() {
         if (cfg.max_file_bytes > 0) setMaxFileBytes(cfg.max_file_bytes);
         setS3Enabled(cfg.s3_enabled);
         setMaxS3FileBytes(cfg.max_s3_file_bytes);
+        setEmailEnabled(Boolean(cfg.email_enabled));
       })
       .catch(() => {
         /* keep the default limit if config is unavailable */
@@ -261,57 +263,61 @@ export function CreatePage() {
             </a>
           </Button>
 
-          <div className="mt-1 h-px bg-border" />
-          <Kicker>Email this link</Kicker>
-          <p className="-mt-3 text-[13.5px] text-muted-foreground">
-            Send the same link by email. It will self-destruct after the
-            timer you chose.
-          </p>
-          <form
-            className="flex flex-col gap-2.5"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!shareUrl || emailBusy) return;
-              setEmailBusy(true);
-              setEmailError(null);
-              setEmailSent(false);
-              try {
-                await sendShareEmail({
-                  to: emailTo.trim(),
-                  url: shareUrl,
-                  expires_in: expiresIn,
-                  max_views: limitViews ? maxViews : null,
-                });
-                setEmailSent(true);
-                setEmailTo("");
-              } catch (err) {
-                setEmailError(err instanceof Error ? err.message : String(err));
-              } finally {
-                setEmailBusy(false);
-              }
-            }}
-          >
-            <Input
-              type="email"
-              autoComplete="email"
-              required
-              placeholder="recipient@example.com"
-              value={emailTo}
-              disabled={emailBusy}
-              onChange={(e) => setEmailTo(e.target.value)}
-            />
-            {emailError && (
-              <Alert variant="destructive">
-                <AlertDescription>{emailError}</AlertDescription>
-              </Alert>
-            )}
-            {emailSent && !emailError && (
-              <p className="text-[13.5px] text-muted-foreground">Sent. You can email someone else.</p>
-            )}
-            <Button type="submit" variant="secondary" disabled={emailBusy}>
-              {emailBusy ? "Sending…" : "Send email"}
-            </Button>
-          </form>
+          {emailEnabled && (
+            <>
+              <div className="mt-1 h-px bg-border" />
+              <Kicker>Email this link</Kicker>
+              <p className="-mt-3 text-[13.5px] text-muted-foreground">
+                Send the same link by email. It will self-destruct after the
+                timer you chose.
+              </p>
+              <form
+                className="flex flex-col gap-2.5"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!shareUrl || emailBusy) return;
+                  setEmailBusy(true);
+                  setEmailError(null);
+                  setEmailSent(false);
+                  try {
+                    await sendShareEmail({
+                      to: emailTo.trim(),
+                      url: shareUrl,
+                      expires_in: expiresIn,
+                      max_views: limitViews ? maxViews : null,
+                    });
+                    setEmailSent(true);
+                    setEmailTo("");
+                  } catch (err) {
+                    setEmailError(err instanceof Error ? err.message : String(err));
+                  } finally {
+                    setEmailBusy(false);
+                  }
+                }}
+              >
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="recipient@example.com"
+                  value={emailTo}
+                  disabled={emailBusy}
+                  onChange={(e) => setEmailTo(e.target.value)}
+                />
+                {emailError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{emailError}</AlertDescription>
+                  </Alert>
+                )}
+                {emailSent && !emailError && (
+                  <p className="text-[13.5px] text-muted-foreground">Sent. You can email someone else.</p>
+                )}
+                <Button type="submit" variant="secondary" disabled={emailBusy}>
+                  {emailBusy ? "Sending…" : "Send email"}
+                </Button>
+              </form>
+            </>
+          )}
 
           {deleteUrl && (
             <>
