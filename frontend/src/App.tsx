@@ -141,7 +141,7 @@ export function App() {
       return;
     }
     applySeo({
-      title: `${name} — quantum-safe transfer that forgets itself`,
+      title: `${name} — quantum-safe file transfer that forgets itself`,
       description: SITE_DESCRIPTION,
       path: "/",
     });
