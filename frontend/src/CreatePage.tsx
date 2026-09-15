@@ -64,6 +64,7 @@ export function CreatePage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
+  const [shareOrigin, setShareOrigin] = useState(() => window.location.origin);
 
   const editorRef = useRef<EditorHandle>(null);
 
@@ -74,6 +75,9 @@ export function CreatePage() {
         setS3Enabled(cfg.s3_enabled);
         setMaxS3FileBytes(cfg.max_s3_file_bytes);
         setEmailEnabled(Boolean(cfg.email_enabled));
+        if (cfg.short_origin) {
+          setShareOrigin(cfg.short_origin.replace(/\/$/, ""));
+        }
       })
       .catch(() => {
         /* keep the default limit if config is unavailable */
@@ -187,12 +191,12 @@ export function CreatePage() {
 
       const keyUrl = bytesToBase64Url(key);
       const url = recipientDeleteToken
-        ? `${window.location.origin}/#/v/${id}/${keyUrl}/${recipientDeleteToken}`
-        : `${window.location.origin}/#/v/${id}/${keyUrl}`;
+        ? `${shareOrigin}/#/v/${id}/${keyUrl}/${recipientDeleteToken}`
+        : `${shareOrigin}/#/v/${id}/${keyUrl}`;
       setShareUrl(url);
       setDeleteUrl(
         deleteToken
-          ? `${window.location.origin}/#/d/${id}/${deleteToken}`
+          ? `${shareOrigin}/#/d/${id}/${deleteToken}`
           : null,
       );
     } catch (e) {

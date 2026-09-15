@@ -280,6 +280,9 @@ fn allowed_hosts(headers: &HeaderMap) -> Vec<String> {
     if let Some(explicit) = std::env::var("PUBLIC_URL").ok() {
         push(&mut out, explicit.trim());
     }
+    if let Some(short) = std::env::var("SHORT_DOMAIN").ok() {
+        push(&mut out, short.trim());
+    }
     if let Some(origin) = headers.get("origin").and_then(|v| v.to_str().ok()) {
         push(&mut out, origin);
     }

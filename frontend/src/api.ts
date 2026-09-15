@@ -63,6 +63,8 @@ export interface AppConfig {
   s3_enabled: boolean;
   max_s3_file_bytes: number;
   email_enabled?: boolean;
+  /** `https://SHORT_DOMAIN` when the server mints short share links. */
+  short_origin?: string;
 }
 
 export async function fetchConfig(): Promise<AppConfig> {

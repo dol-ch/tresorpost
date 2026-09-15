@@ -17,6 +17,7 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 mod admin;
 mod common;
 mod db;
+mod host;
 mod mail;
 mod rate;
 mod s3;
@@ -147,6 +148,14 @@ async fn main() {
         tracing::info!("share-email SMTP not configured — email UI disabled");
     }
 
+    if let Some(short) = host::short_domain_host() {
+        if let Some(public) = host::public_origin() {
+            tracing::info!("SHORT_DOMAIN={short} redirects to {public}");
+        } else {
+            tracing::warn!("SHORT_DOMAIN is set but PUBLIC_URL is missing — no canonical redirect");
+        }
+    }
+
     let admin_auth_limiter = rate::AdminAuthLimiter::from_env();
     if admin_auth_limiter.disabled() {
         tracing::info!("admin auth failure limit disabled (ADMIN_AUTH_MAX_FAILURES=0)");
@@ -205,6 +214,7 @@ async fn main() {
 
     let app = security_headers_layer(app)
         .layer(TraceLayer::new_for_http())
+        .layer(axum::middleware::from_fn(host::short_domain_redirect))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
