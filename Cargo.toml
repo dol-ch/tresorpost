@@ -1,6 +1,6 @@
 [package]
 name = "tresorpost"
-version = "0.1.13"
+version = "0.1.14"
 edition = "2024"
 description = "Tresorpost — end-to-end encrypted, quantum-resistant, burn-after-reading transfer service"
 
@@ -24,8 +24,22 @@ rand = "0.10"
 sha2 = "0.11"
 subtle = "2"
 base64 = "0.23"
-aws-config = { version = "1", features = ["behavior-version-latest"] }
-aws-sdk-s3 = "1"
+# AWS SDK's default `rustls` feature is the deprecated rustls 0.21 +
+# rustls-webpki 0.101 stack (Dependabot #3 / GHSA-82j2-j2ch-gfr8).
+# `default-https-client` is rustls 0.23 + aws-lc (webpki 0.103.15).
+aws-config = { version = "1", default-features = false, features = [
+    "behavior-version-latest",
+    "rt-tokio",
+    "credentials-process",
+    "sso",
+    "default-https-client",
+] }
+aws-sdk-s3 = { version = "1", default-features = false, features = [
+    "rt-tokio",
+    "http-1x",
+    "default-https-client",
+    "sigv4a",
+] }
 aws-credential-types = "1"
 lettre = { version = "0.11.23", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
 
