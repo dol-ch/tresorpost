@@ -100,7 +100,7 @@ export function CreatePage() {
   const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
-    const blockBrowserFileOpen = (e: DragEvent) => {
+    const blockBrowserFileOpen = (e: Event) => {
       e.preventDefault();
     };
     window.addEventListener("dragover", blockBrowserFileOpen);
