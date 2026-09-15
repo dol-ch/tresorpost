@@ -8,6 +8,10 @@ updates:
       # 6.x pulls @rolldown/plugin-babel → @babel/core 8 rc peer conflict.
       - dependency-name: "@vitejs/plugin-react"
         update-types: ["version-update:semver-major"]
+      # TS 7 is the Go native compiler, not a security patch. Vite/Oxc
+      # typechecks/transforms the app; we are not switching tsc yet.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: cargo
     directory: /
