@@ -79,6 +79,7 @@ export const RichTextEditor = forwardRef<
       },
     });
     v.dom.classList.add("is-empty");
+    onEmptyChangeRef.current?.(true);
     viewRef.current = v;
     setView(v);
     if (autoFocus) v.focus();
@@ -110,18 +111,9 @@ export const RichTextEditor = forwardRef<
   }));
 
   return (
-    <div className="overflow-hidden rounded-t-[14px]" ref={wrapRef}>
+    <div ref={wrapRef} className="overflow-hidden rounded-t-[14px]">
+      {view && <EditorToolbar view={view} />}
       <div className="editor-host" ref={hostRef} />
-      {view && (
-        <div className="flex items-center justify-between gap-2 border-t border-border">
-          <div className="min-w-0 flex-1">
-            <EditorToolbar view={view} />
-          </div>
-          <span className="shrink-0 pr-3 text-[12.5px] text-muted-foreground">
-            Rich text
-          </span>
-        </div>
-      )}
     </div>
   );
 });

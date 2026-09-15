@@ -113,7 +113,6 @@ export function CreatePage() {
       (kind === "image" && file !== null && file.size > maxFileBytes));
   const effectiveMax = s3Enabled && kind !== "text" ? maxS3FileBytes : maxFileBytes;
   const maxLabel = humanSize(effectiveMax);
-  const fileMaxLabel = humanSize(s3Enabled ? maxS3FileBytes : maxFileBytes);
   const fileTooBig = !!file && file.size > effectiveMax;
 
   useEffect(() => {
@@ -440,7 +439,7 @@ export function CreatePage() {
                 </Button>
               </div>
               {!editorEmpty && (
-                <p className="flex items-start gap-2 text-[13px] text-muted-foreground">
+                <p className="flex items-start gap-2 text-[13px] text-destructive">
                   <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.8} />
                   <span>
                     One note holds one thing. Go back and delete your text, or it
@@ -496,11 +495,7 @@ export function CreatePage() {
               </button>
             )}
             <span className="truncate text-[12.5px] text-muted-foreground">
-              {fileKind
-                ? `Sent as ${fileKind}`
-                : editorOpen
-                  ? "Sent as text"
-                  : `Image, video or file · up to ${fileMaxLabel}`}
+              {fileKind ? `Sent as ${fileKind}` : "Sent as text"}
             </span>
             <input
               ref={fileInputRef}
