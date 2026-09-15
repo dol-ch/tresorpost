@@ -20,9 +20,8 @@ branding (logos, fonts) lives in a swappable theme layer; see
 - **Quantum-resistant cipher.** Payloads are sealed with **XChaCha20-Poly1305**
   using a 256-bit key. Symmetric ciphers at 256 bits retain ~128-bit security
   even against Grover's algorithm, so they are considered quantum-safe.
-- **Four content types** via a dropdown: **Text** (ProseMirror rich text, no
-  attachments), **Image**, **Video** (in-browser player when the codec allows,
-  otherwise download), and **File**.
+- **Text or a file.** Write a note, or attach an image, video or file — the
+  type is inferred. No type picker.
 - **Self-destruct timer:** 1, 5, 15, 30 minutes · 1, 3, 6, 12 hours · 1, 3, 7
   days · 1 month. The view page shows remaining opens and expiry.
 - **Optional open limit:** burn the secret after _N_ opens (numeric input, 1…∞).
