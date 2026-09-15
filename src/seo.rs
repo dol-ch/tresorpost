@@ -241,7 +241,7 @@ fn replace_noscript(html: &str, inner: &str) -> String {
     splice(html, from, from + rel, inner)
 }
 
-const FAQ_JSON: &str = include_str!("../frontend/src/content/faqs.json");
+const FAQ_JSON: &str = include_str!("seo_faqs.json");
 
 fn inject_faq_json_ld(html: &str) -> String {
     if html.contains("id=\"tresorpost-faq-jsonld\"") {
@@ -335,6 +335,22 @@ mod tests {
         assert!(out.contains("Privacy — Tresorpost"));
         assert!(out.contains("https://tresorpost.ch/privacy"));
         assert!(out.contains("index, follow"));
+    }
+
+    #[test]
+    fn admin_is_noindex() {
+        let out = rewrite_index_html(FIXTURE, "/admin");
+        assert!(out.contains("noindex, nofollow"));
+        assert!(noindex_path("/admin"));
+        assert!(!noindex_path("/faq"));
+    }
+
+    #[test]
+    fn faq_json_matches_frontend_copy() {
+        assert_eq!(
+            include_str!("seo_faqs.json"),
+            include_str!("../frontend/src/content/faqs.json")
+        );
     }
 
     #[test]
