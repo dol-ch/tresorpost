@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Segmented } from "@/components/ui/segmented";
 import { Switch } from "@/components/ui/switch";
-import { Kicker, StepKicker } from "@/components/kit";
+import { Kicker } from "@/components/kit";
 
 function progressPct(done: number, total: number) {
   if (!total) return 0;
@@ -219,7 +219,7 @@ export function CreatePage() {
     return (
       <Card>
         <CardContent className="flex flex-col gap-4.5">
-          <StepKicker num="02">Share</StepKicker>
+          <Kicker>Share</Kicker>
           <h2 className="-mt-1 font-heading text-2xl font-bold tracking-tight">
             Your encrypted link is ready
           </h2>

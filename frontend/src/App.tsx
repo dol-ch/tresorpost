@@ -9,7 +9,7 @@ import { PrivacyPage } from "./PrivacyPage";
 import { brand } from "./brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
-import { StepKicker } from "@/components/kit";
+import { Kicker } from "@/components/kit";
 import { cn } from "@/lib/utils";
 
 type Route =
@@ -79,9 +79,9 @@ export function App() {
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <div className="mx-auto w-full max-w-[720px] px-5 pt-7 pb-18 sm:px-5">
-        <nav className="mb-7 flex flex-wrap items-center gap-1.5">
+        <nav className="mb-7 flex flex-nowrap items-center gap-1">
           <a
-            className="mr-auto inline-flex min-w-0 items-center gap-2 whitespace-nowrap"
+            className="mr-auto inline-flex min-w-0 shrink items-center gap-2 whitespace-nowrap"
             href="#/"
             aria-label={brand.name}
           >
@@ -103,7 +103,7 @@ export function App() {
           {route.name === "create" && (
             <>
               <section className="mb-7">
-                <StepKicker num="01">Secure transfer</StepKicker>
+                <Kicker className="mb-2">Secure transfer</Kicker>
                 <h1 className="mb-3.5 font-heading text-[clamp(27px,7.6vw,40px)] leading-[1.1] font-extrabold tracking-tight text-balance">
                   Share a secret only the recipient can read.
                 </h1>
