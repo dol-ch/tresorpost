@@ -310,6 +310,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
       <S3FileView
         status={status}
         id={id}
+        keyB64Url={keyB64Url}
         recipientDeleteToken={recipientDeleteToken}
         onDestroyed={() => setStatus({ state: "destroyed" })}
       />
@@ -332,24 +333,64 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
       <CardContent className="flex flex-col gap-4">
         <DecryptedLocallyBadge />
         <SelfDestructCard opensLine={opensLine} expiry={expiry} />
-        {payload.kind === "text" && <RenderedText html={payload.data} />}
-        {payload.kind === "image" && (
-          <div className="space-y-2 text-center">
-            <img
-              alt={payload.filename ?? "image"}
-              className="mx-auto max-w-full rounded-[14px]"
-              src={URL.createObjectURL(base64ToBlob(payload.data, payload.mime ?? "image/*"))}
+        {payload.kind === "text" && (
+          <>
+            <RenderedText html={payload.data} />
+            <ReportButton
+              id={id}
+              keyB64Url={keyB64Url}
+              kind="text"
+              label="Report text"
+              payload={payload}
             />
-            <p className="text-sm text-muted-foreground">{payload.filename}</p>
-          </div>
+          </>
+        )}
+        {payload.kind === "image" && (
+          <>
+            <div className="space-y-2 text-center">
+              <img
+                alt={payload.filename ?? "image"}
+                className="mx-auto max-w-full rounded-lg"
+                src={URL.createObjectURL(base64ToBlob(payload.data, payload.mime ?? "image/*"))}
+              />
+              <p className="text-sm text-muted-foreground">{payload.filename}</p>
+            </div>
+            <ReportButton
+              id={id}
+              keyB64Url={keyB64Url}
+              kind="image"
+              label="Report image"
+              payload={payload}
+            />
+          </>
         )}
         {payload.kind === "video" && (
-          <VideoPlayer
-            blob={base64ToBlob(payload.data, payload.mime ?? "video/mp4")}
-            filename={payload.filename}
-          />
+          <>
+            <VideoPlayer
+              blob={base64ToBlob(payload.data, payload.mime ?? "video/mp4")}
+              filename={payload.filename}
+            />
+            <ReportButton
+              id={id}
+              keyB64Url={keyB64Url}
+              kind="video"
+              label="Report video"
+              payload={payload}
+            />
+          </>
         )}
-        {payload.kind === "file" && <FileDownload payload={payload} />}
+        {payload.kind === "file" && (
+          <>
+            <FileDownload payload={payload} />
+            <ReportButton
+              id={id}
+              keyB64Url={keyB64Url}
+              kind="file"
+              label="Report file"
+              payload={payload}
+            />
+          </>
+        )}
         <div className="flex flex-col gap-2 pt-1">
           {recipientDeleteToken && (
             <RecipientDestroy
@@ -372,11 +413,13 @@ type S3Status = Extract<Status, { state: "s3file" }>;
 function S3FileView({
   status,
   id,
+  keyB64Url,
   recipientDeleteToken,
   onDestroyed,
 }: {
   status: S3Status;
   id: string;
+  keyB64Url: string;
   recipientDeleteToken?: string;
   onDestroyed: () => void;
 }) {
@@ -526,6 +569,14 @@ function S3FileView({
           </Button>
         )}
 
+        <ReportButton
+          id={id}
+          keyB64Url={keyB64Url}
+          kind={isVideo ? "video" : isImage ? "image" : "file"}
+          label={isVideo ? "Report video" : isImage ? "Report image" : "Report file"}
+          header={header}
+        />
+
         <div className="flex flex-col gap-2 pt-1">
           {recipientDeleteToken && (
             <RecipientDestroy id={id} token={recipientDeleteToken} onDestroyed={onDestroyed} />
@@ -536,6 +587,59 @@ function S3FileView({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ReportButton({
+  id,
+  keyB64Url,
+  kind,
+  label,
+  payload,
+  header,
+}: {
+  id: string;
+  keyB64Url: string;
+  kind: string;
+  label: string;
+  payload?: SecretPayload;
+  header?: StreamHeader;
+}) {
+  const onConfirm = () => {
+    // TODO: submit report for admin review
+    console.log("Report secret", { id, key: keyB64Url, kind, payload, header });
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          id={`report-${id}`}
+          data-id={id}
+          data-secret-id={id}
+          data-key={keyB64Url}
+          data-kind={kind}
+          variant="destructive"
+          type="button"
+        >
+          {label}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Report this content?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Reporting this content will send the decryption key to administrators so that the file or note can be reviewed.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="text-destructive" onClick={onConfirm}>
+            Report
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
