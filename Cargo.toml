@@ -1,6 +1,6 @@
 [package]
 name = "tresorpost"
-version = "0.1.12"
+version = "0.1.13"
 edition = "2024"
 description = "Tresorpost — end-to-end encrypted, quantum-resistant, burn-after-reading transfer service"
 
@@ -20,10 +20,10 @@ uuid = { version = "1.26.1", features = ["v4"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 dotenvy = "0.15.7"
-rand = "0.8"
-sha2 = "0.10"
+rand = "0.10"
+sha2 = "0.11"
 subtle = "2"
-base64 = "0.22"
+base64 = "0.23"
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-s3 = "1"
 aws-credential-types = "1"

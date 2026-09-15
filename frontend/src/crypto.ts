@@ -8,7 +8,7 @@
 // browsers do not transmit in HTTP requests. The server therefore only ever
 // stores opaque ciphertext and can never decrypt it.
 
-import { xchacha20poly1305 } from "@noble/ciphers/chacha";
+import { xchacha20poly1305 } from "@noble/ciphers/chacha.js";
 
 const KEY_BYTES = 32; // 256-bit key
 const NONCE_BYTES = 24; // XChaCha20 extended nonce

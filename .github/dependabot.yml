@@ -4,6 +4,10 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
+    ignore:
+      # 6.x pulls @rolldown/plugin-babel → @babel/core 8 rc peer conflict.
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: cargo
     directory: /
@@ -14,6 +18,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Stay on Node LTS (24). Current (26+) is not a security patch.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /

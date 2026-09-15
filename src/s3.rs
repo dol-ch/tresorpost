@@ -12,12 +12,12 @@
 
 use std::time::Duration;
 
+use aws_sdk_s3::Client;
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use aws_sdk_s3::error::ProvideErrorMetadata;
 use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
-use aws_sdk_s3::Client;
-use rand::Rng;
+use rand::RngExt;
 
 /// A configured S3 backend. Cloned cheaply (the inner `Client` is an `Arc`).
 #[derive(Clone)]
@@ -42,7 +42,9 @@ impl S3Backend {
     /// when `S3_ENDPOINT` is unset/empty. Requires `S3_BUCKET`,
     /// `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` when enabled.
     pub fn from_env(max_file_bytes: i64) -> Option<S3Backend> {
-        let endpoint = std::env::var("S3_ENDPOINT").ok().filter(|s| !s.is_empty())?;
+        let endpoint = std::env::var("S3_ENDPOINT")
+            .ok()
+            .filter(|s| !s.is_empty())?;
         let bucket = match std::env::var("S3_BUCKET").ok().filter(|s| !s.is_empty()) {
             Some(b) => b,
             None => {
@@ -98,9 +100,9 @@ impl S3Backend {
     /// Generate a random, unguessable object key under a stable prefix.
     pub fn random_key() -> String {
         const ALPHABET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyz";
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let name: String = (0..32)
-            .map(|_| ALPHABET[rng.gen_range(0..ALPHABET.len())] as char)
+            .map(|_| ALPHABET[rng.random_range(0..ALPHABET.len())] as char)
             .collect();
         format!("tresorpost/{name}")
     }

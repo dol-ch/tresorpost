@@ -3,36 +3,37 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::{
-    http::{header, HeaderName, HeaderValue, StatusCode},
     Json, Router,
+    http::{HeaderName, HeaderValue, StatusCode, header},
 };
-use tower_http::set_header::SetResponseHeaderLayer;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use rand::{Rng, RngCore};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
 use subtle::ConstantTimeEq;
+use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::s3::S3Backend;
 
 /// Alphabet for short share IDs (URL-safe, no look-alike separators).
-pub(crate) const ID_ALPHABET: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+pub(crate) const ID_ALPHABET: &[u8] =
+    b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 /// Short-ID length. 62^12 ≈ 3.2e21 (~71 bits): unguessable, collision-free at
 /// any realistic volume, yet far shorter than a 36-char UUID.
 pub(crate) const ID_LEN: usize = 12;
 
 pub(crate) fn generate_id() -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     (0..ID_LEN)
-        .map(|_| ID_ALPHABET[rng.gen_range(0..ID_ALPHABET.len())] as char)
+        .map(|_| ID_ALPHABET[rng.random_range(0..ID_ALPHABET.len())] as char)
         .collect()
 }
 
 /// 32-byte creator delete token (URL-safe, unpadded). Shown once at create time.
 pub(crate) fn generate_delete_token() -> String {
     let mut bytes = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    rand::rng().fill(&mut bytes);
     URL_SAFE_NO_PAD.encode(bytes)
 }
 
@@ -100,7 +101,6 @@ pub(crate) fn derive_limits(max_file_bytes: u64) -> (usize, usize) {
     let ciphertext = (max_file_bytes * 2 + 256 * 1024) as usize; // ciphertext char cap
     (body, ciphertext)
 }
-
 
 #[derive(Clone)]
 pub(crate) struct AppState {
@@ -207,7 +207,9 @@ pub(crate) fn s3_connect_origin(endpoint: &str) -> String {
     if let Some(scheme_end) = s.find("://") {
         let after = &s[scheme_end + 3..];
         if let Some(slash) = after.find('/') {
-            return s[..scheme_end + 3 + slash].trim_end_matches('/').to_string();
+            return s[..scheme_end + 3 + slash]
+                .trim_end_matches('/')
+                .to_string();
         }
     }
     s.trim_end_matches('/').to_string()
