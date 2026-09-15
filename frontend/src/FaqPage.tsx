@@ -20,7 +20,7 @@ function Step({ num, title, body }: { num: string; title: string; body: string }
 function Qa({ q, a }: { q: string; a: string }) {
   return (
     <div>
-      <h2 className="mb-1 text-base font-semibold tracking-tight">{q}</h2>
+      <h2 className="mb-1 font-heading text-base font-semibold tracking-tight">{q}</h2>
       <p className="text-[14.5px] leading-relaxed text-muted-foreground">{a}</p>
     </div>
   );

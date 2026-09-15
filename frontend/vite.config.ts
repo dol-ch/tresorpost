@@ -4,10 +4,16 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 
-/** If a private overlay ships its own tab icons, copy them into dist. The
- *  committed default is always the Tresorpost padlock in public/. */
+/** If a private overlay ships its own tab icons or OG card, copy them into
+ *  dist. The committed default is always the Tresorpost padlock / Inter card
+ *  in public/. Licensed fonts stay out of this repo. */
 function privateFaviconOverride(): Plugin {
-  const files = ["favicon.svg", "favicon.ico", "apple-touch-icon.png"];
+  const files = [
+    "favicon.svg",
+    "favicon.ico",
+    "apple-touch-icon.png",
+    "og.png",
+  ];
   return {
     name: "private-favicon-override",
     writeBundle(options) {
