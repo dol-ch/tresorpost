@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Tresorpost">
+  <!-- Full-bleed fill so iOS can mask; rounding the tile ourselves caused black corners. -->
+  <rect width="180" height="180" fill="#09090b"/>
+  <g transform="translate(24 24) scale(5.5)" fill="none" stroke="#fafafa" stroke-width="2" stroke-linecap="round">
+    <path d="M7 10V7a5 5 0 0 1 10 0v3"/>
+    <rect x="4.5" y="10" width="15" height="10.5" rx="2.5"/>
+    <circle cx="12" cy="15" r="1.6" fill="#fafafa" stroke="none"/>
+    <path d="M12 16.4v1.6"/>
+  </g>
+</svg>
