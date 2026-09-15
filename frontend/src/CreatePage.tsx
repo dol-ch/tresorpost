@@ -9,6 +9,7 @@ import {
 import {
   encodePayload,
   fileToBase64,
+  kindFromFile,
   mimeForUpload,
   type SecretKind,
   type SecretPayload,
@@ -17,7 +18,6 @@ import { createSecret, fetchConfig, sendShareEmail } from "./api";
 import { uploadLargeFile } from "./largeFile";
 import { EXPIRY_OPTIONS, MAX_FILE_BYTES, humanSize } from "./options";
 import { copyText } from "./clipboard";
-import { FileDropzone } from "@/components/file-dropzone";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,22 +26,31 @@ import { Progress } from "@/components/ui/progress";
 import { Segmented } from "@/components/ui/segmented";
 import { Switch } from "@/components/ui/switch";
 import { Kicker } from "@/components/kit";
+import { ChevronDown, Paperclip, X } from "lucide-react";
 
 function progressPct(done: number, total: number) {
   if (!total) return 0;
   return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
 }
 
-const TYPE_OPTIONS: { value: SecretKind; label: string }[] = [
-  { value: "text", label: "Text" },
-  { value: "image", label: "Image" },
-  { value: "video", label: "Video" },
-  { value: "file", label: "File" },
-];
+function optionsSummary(opts: {
+  limitViews: boolean;
+  maxViews: number;
+  allowDelete: boolean;
+  allowRecipientDelete: boolean;
+}): string {
+  const bits: string[] = [];
+  if (opts.limitViews) {
+    bits.push(opts.maxViews === 1 ? "max 1 open" : `max ${opts.maxViews} opens`);
+  }
+  if (opts.allowDelete) bits.push("delete link");
+  if (opts.allowRecipientDelete) bits.push("recipient can delete");
+  return bits.length ? bits.join(" · ") : "Defaults";
+}
 
 export function CreatePage() {
-  const [kind, setKind] = useState<SecretKind>("text");
   const [file, setFile] = useState<File | null>(null);
+  const kind: SecretKind = file ? kindFromFile(file) : "text";
   const [expiresIn, setExpiresIn] = useState<number>(EXPIRY_OPTIONS[1].seconds);
   const [limitViews, setLimitViews] = useState(false);
   const [maxViews, setMaxViews] = useState<number>(1);
@@ -51,8 +60,9 @@ export function CreatePage() {
   const [qr, setQr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedDelete, setCopiedDelete] = useState(false);
-  const [allowDelete, setAllowDelete] = useState(true);
+  const [allowDelete, setAllowDelete] = useState(false);
   const [allowRecipientDelete, setAllowRecipientDelete] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [deleteUrl, setDeleteUrl] = useState<string | null>(null);
   const [maxFileBytes, setMaxFileBytes] = useState<number>(MAX_FILE_BYTES);
   const [s3Enabled, setS3Enabled] = useState(false);
@@ -67,6 +77,8 @@ export function CreatePage() {
   const [shareOrigin, setShareOrigin] = useState(() => window.location.origin);
 
   const editorRef = useRef<EditorHandle>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [composeDrag, setComposeDrag] = useState(false);
 
   useEffect(() => {
     fetchConfig()
@@ -86,6 +98,7 @@ export function CreatePage() {
 
   const useS3 =
     s3Enabled &&
+    kind !== "text" &&
     (kind === "file" ||
       kind === "video" ||
       (kind === "image" && file !== null && file.size > maxFileBytes));
@@ -213,10 +226,11 @@ export function CreatePage() {
     }
   }
 
-  function onFile(next: File | null) {
+  function takeFile(next: File | null) {
     setError(null);
-    if (next && next.size > effectiveMax) {
-      setError(`File is too large (${humanSize(next.size)}). Max is ${maxLabel}.`);
+    if (next && next.size > (s3Enabled ? maxS3FileBytes : maxFileBytes)) {
+      const cap = s3Enabled ? maxS3FileBytes : maxFileBytes;
+      setError(`File is too large (${humanSize(next.size)}). Max is ${humanSize(cap)}.`);
     }
     setFile(next);
   }
@@ -369,51 +383,69 @@ export function CreatePage() {
   return (
     <Card>
       <CardContent className="flex flex-col gap-[22px]">
-        <div>
-          <Kicker className="mb-2">Type</Kicker>
-          <Segmented
-            aria-label="Secret type"
-            value={kind}
-            onChange={(v) => {
-              setKind(v);
-              setFile(null);
-              setError(null);
-            }}
-            options={TYPE_OPTIONS}
-          />
-        </div>
-
-        {kind === "text" ? (
-          <div>
-            <Kicker className="mb-2">Message</Kicker>
+        <div
+          className={
+            composeDrag
+              ? "overflow-hidden rounded-[14px] border-[1.5px] border-primary bg-muted"
+              : "overflow-hidden rounded-[14px] border border-border bg-card"
+          }
+          onDragOver={(e) => {
+            e.preventDefault();
+            setComposeDrag(true);
+          }}
+          onDragLeave={() => setComposeDrag(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setComposeDrag(false);
+            const dropped = e.dataTransfer.files?.[0] ?? null;
+            if (dropped) takeFile(dropped);
+          }}
+        >
+          {file ? (
+            <div className="flex items-center gap-3 px-4 py-4">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-medium">{file.name}</div>
+                <div className="text-[13px] text-muted-foreground">
+                  {kind === "image" ? "Image" : kind === "video" ? "Video" : "File"} ·{" "}
+                  {humanSize(file.size)}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Remove file"
+                onClick={() => takeFile(null)}
+              >
+                <X />
+              </Button>
+            </div>
+          ) : (
             <RichTextEditor ref={editorRef} />
-          </div>
-        ) : (
-          <div>
-            <Kicker className="mb-2">
-              {kind === "image" ? "Image" : kind === "video" ? "Video" : "File"} (max{" "}
-              {maxLabel})
-            </Kicker>
-            <FileDropzone
-              label={`Drop ${kind === "image" ? "an image" : kind === "video" ? "a video" : "a file"} here, or click to browse`}
-              file={file}
-              accept={
-                kind === "image"
-                  ? "image/*"
-                  : kind === "video"
-                    ? "video/*,.mov,.avi,.mkv,.webm,.mp4,.m4v,.ogv,.3gp"
-                    : undefined
-              }
-              onFile={onFile}
+          )}
+          <div className="flex items-center justify-between gap-3 border-t border-border px-3.5 py-2.5">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-[10px] px-1.5 py-1 text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip className="size-4" strokeWidth={1.8} />
+              {file ? "Replace file" : "Attach a file"}
+            </button>
+            <span className="truncate text-[12.5px] text-muted-foreground">
+              Image, video or file · up to {fileMaxLabel}
+            </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="sr-only"
+              onChange={(e) => {
+                takeFile(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
             />
-            {kind === "image" && !s3Enabled && (
-              <p className="mt-2 text-[13px] text-muted-foreground">
-                Without S3, images are limited to {humanSize(maxFileBytes)}. Phone
-                photos are often larger — set S3_* in .env.
-              </p>
-            )}
           </div>
-        )}
+        </div>
 
         <div>
           <Kicker className="mb-2">Self-destruct after</Kicker>
@@ -425,44 +457,64 @@ export function CreatePage() {
           />
         </div>
 
-        <div className="flex flex-col gap-4 rounded-[14px] bg-muted p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[15px] font-medium">Limit number of opens</div>
-            <Switch checked={limitViews} onCheckedChange={setLimitViews} />
-          </div>
-          {limitViews && (
-            <Input
-              type="number"
-              min={1}
-              className="max-w-25"
-              value={maxViews}
-              onChange={(e) => setMaxViews(Math.max(1, Number(e.target.value) || 1))}
-            />
+        <div className="rounded-[14px] bg-muted">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
+            aria-expanded={optionsOpen}
+            onClick={() => setOptionsOpen((open) => !open)}
+          >
+            <span className="text-[15px] font-medium">Options</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-[13px] text-muted-foreground">
+                {optionsSummary({
+                  limitViews,
+                  maxViews,
+                  allowDelete,
+                  allowRecipientDelete,
+                })}
+              </span>
+              <ChevronDown
+                className={
+                  optionsOpen
+                    ? "size-4 shrink-0 rotate-180 text-muted-foreground"
+                    : "size-4 shrink-0 text-muted-foreground"
+                }
+                strokeWidth={1.8}
+              />
+            </span>
+          </button>
+          {optionsOpen && (
+            <div className="flex flex-col gap-4 border-t border-border px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[15px] font-medium">Limit number of opens</div>
+                <Switch checked={limitViews} onCheckedChange={setLimitViews} />
+              </div>
+              {limitViews && (
+                <Input
+                  type="number"
+                  min={1}
+                  className="max-w-25"
+                  value={maxViews}
+                  onChange={(e) => setMaxViews(Math.max(1, Number(e.target.value) || 1))}
+                />
+              )}
+
+              <div className="h-px bg-border" />
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[15px] font-medium">Keep a private delete link</div>
+                <Switch checked={allowDelete} onCheckedChange={setAllowDelete} />
+              </div>
+
+              <div className="h-px bg-border" />
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[15px] font-medium">Recipient can delete it</div>
+                <Switch checked={allowRecipientDelete} onCheckedChange={setAllowRecipientDelete} />
+              </div>
+            </div>
           )}
-
-          <div className="h-px bg-border" />
-
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[15px] font-medium">Let me delete this note later</div>
-              <div className="mt-0.5 text-[13px] text-muted-foreground">
-                A private delete link — not part of the share URL.
-              </div>
-            </div>
-            <Switch checked={allowDelete} onCheckedChange={setAllowDelete} />
-          </div>
-
-          <div className="h-px bg-border" />
-
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[15px] font-medium">Recipient can permanently delete</div>
-              <div className="mt-0.5 text-[13px] text-muted-foreground">
-                Adds a destroy button on the open page.
-              </div>
-            </div>
-            <Switch checked={allowRecipientDelete} onCheckedChange={setAllowRecipientDelete} />
-          </div>
         </div>
 
         {error && (
@@ -483,6 +535,7 @@ export function CreatePage() {
         )}
 
         <Button
+          className="w-full"
           onClick={onCreate}
           disabled={busy || fileTooBig || (kind !== "text" && !file)}
         >

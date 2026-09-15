@@ -1,16 +1,12 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { CreatePage } from "./CreatePage";
-import { HomepageStats } from "./HomepageStats";
 import { ViewPage } from "./ViewPage";
 import { DeletePage } from "./DeletePage";
 import { AdminPage } from "./AdminPage";
 import { FaqPage } from "./FaqPage";
 import { PrivacyPage } from "./PrivacyPage";
 import { brand } from "./brand";
-import { SwissFlag } from "./brand/default/SwissFlag";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Badge } from "@/components/ui/badge";
-import { Kicker } from "@/components/kit";
 import { cn } from "@/lib/utils";
 import { applySeo, SITE_DESCRIPTION } from "./seo";
 
@@ -149,9 +145,6 @@ export function App() {
 
   const Wordmark = brand.Wordmark;
   const sendActive = route.name === "create" || route.name === "view" || route.name === "delete";
-  const sourceHref =
-    brand.footerLinks.find((l) => /github\.com/i.test(l.href))?.href ??
-    brand.footerLinks[0]?.href;
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
@@ -181,35 +174,15 @@ export function App() {
           {route.name === "create" && (
             <>
               <section className="mb-7">
-                <Kicker className="mb-2">Secure transfer</Kicker>
                 <h1 className="mb-3.5 font-heading text-[clamp(27px,7.6vw,40px)] leading-[1.1] font-extrabold tracking-tight text-balance">
-                  Send encrypted files and secrets only the recipient can read.
+                  Send a secret. It reads once, then it’s gone.
                 </h1>
-                <p className="mb-5 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
-                  Encrypted in your browser, burned after reading. The key stays
-                  in the link — the server never sees it. Hosted in Switzerland,
-                  no analytics.
+                <p className="mb-7 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
+                  Encrypted on your device. The key stays in the link — never on
+                  the server.
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">XChaCha20-Poly1305</Badge>
-                  <Badge variant="secondary">256-bit · quantum-safe</Badge>
-                  <Badge variant="secondary">Zero-knowledge server</Badge>
-                  <Badge variant="secondary">No analytics</Badge>
-                  <Badge variant="secondary" className="gap-1.5">
-                    <SwissFlag />
-                    Hosted in Switzerland
-                  </Badge>
-                  {sourceHref && (
-                    <Badge variant="secondary" asChild>
-                      <a href={sourceHref} target="_blank" rel="noreferrer">
-                        Open Source
-                      </a>
-                    </Badge>
-                  )}
-                </div>
               </section>
               <CreatePage />
-              <HomepageStats />
             </>
           )}
           {route.name === "view" && (

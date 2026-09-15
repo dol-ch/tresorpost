@@ -48,9 +48,13 @@ export const RichTextEditor = forwardRef<EditorHandle>((_props, ref) => {
       state,
       dispatchTransaction(tr) {
         v.updateState(v.state.apply(tr));
+        const doc = v.state.doc;
+        const empty = doc.childCount === 1 && doc.firstChild?.content.size === 0;
+        v.dom.classList.toggle("is-empty", empty);
         forceRender();
       },
     });
+    v.dom.classList.add("is-empty");
     viewRef.current = v;
     setView(v);
     return () => {
@@ -79,7 +83,7 @@ export const RichTextEditor = forwardRef<EditorHandle>((_props, ref) => {
   }));
 
   return (
-    <div className="overflow-hidden rounded-[14px] border border-border bg-card">
+    <div className="overflow-hidden rounded-t-[14px]">
       {view && <EditorToolbar view={view} />}
       <div className="editor-host" ref={hostRef} />
     </div>

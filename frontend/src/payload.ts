@@ -4,6 +4,17 @@
 
 export type SecretKind = "text" | "image" | "file" | "video";
 
+/** Infer payload kind from MIME, then filename — text is the no-file default. */
+export function kindFromFile(file: File): Exclude<SecretKind, "text"> {
+  const mime = (file.type || "").toLowerCase();
+  const name = file.name.toLowerCase();
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (/\.(png|jpe?g|gif|webp|svg|heic|heif|avif|bmp|ico)$/i.test(name)) return "image";
+  if (/\.(mp4|m4v|mov|webm|avi|mkv|ogv|3gp)$/i.test(name)) return "video";
+  return "file";
+}
+
 export interface SecretPayload {
   kind: SecretKind;
   /** For text: sanitized rich-text HTML. For image/file/video: base64 of raw bytes. */
