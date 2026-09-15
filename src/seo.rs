@@ -57,8 +57,8 @@ where
 
 const SITE: &str = "https://tresorpost.ch";
 
-const HOME_TITLE: &str = "Tresorpost — encrypted self-destructing file transfer";
-const HOME_DESCRIPTION: &str = "End-to-end encrypted, self-destructing transfer for text, images, video and files. Encrypted in your browser, hosted in Switzerland, no accounts and no analytics.";
+const HOME_TITLE: &str = "Tresorpost — quantum-safe transfer that forgets itself";
+const HOME_DESCRIPTION: &str = "Quantum-safe, end-to-end encrypted transfer for text, images, video and files. 256-bit encryption in your browser, hosted in Switzerland, no accounts and no analytics.";
 
 const FAQ_TITLE: &str = "How it works — Tresorpost";
 const FAQ_DESCRIPTION: &str = "How Tresorpost encrypts secrets in the browser, keeps the key in the link, and deletes ciphertext after reading. Hosted in Switzerland, no analytics.";
@@ -362,7 +362,7 @@ mod tests {
         assert!(faq.contains("FAQPage"));
         assert!(faq.contains("og.png"));
         let home = rewrite_index_html(html, "/");
-        assert!(home.contains("encrypted self-destructing file transfer"));
+        assert!(home.contains("quantum-safe transfer that forgets itself"));
         assert!(!home.contains("id=\"tresorpost-faq-jsonld\""));
     }
 }

@@ -141,7 +141,7 @@ export function App() {
       return;
     }
     applySeo({
-      title: `${name} — encrypted self-destructing file transfer`,
+      title: `${name} — quantum-safe transfer that forgets itself`,
       description: SITE_DESCRIPTION,
       path: "/",
     });

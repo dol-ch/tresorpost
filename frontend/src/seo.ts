@@ -2,7 +2,7 @@
 export const SITE_ORIGIN = "https://tresorpost.ch";
 
 export const SITE_DESCRIPTION =
-  "End-to-end encrypted, self-destructing transfer for text, images, video and files. Encrypted in your browser, hosted in Switzerland, no accounts and no analytics.";
+  "Quantum-safe, end-to-end encrypted transfer for text, images, video and files. 256-bit encryption in your browser, hosted in Switzerland, no accounts and no analytics.";
 
 type SeoInput = {
   title: string;
