@@ -11,9 +11,9 @@ function privateFaviconOverride(): Plugin {
   return {
     name: "private-favicon-override",
     writeBundle(options) {
-      const dir = options.dir ?? path.resolve(__dirname, "dist");
+      const dir = options.dir ?? path.resolve(import.meta.dirname, "dist");
       for (const name of files) {
-        const src = path.resolve(__dirname, "src/brand/private", name);
+        const src = path.resolve(import.meta.dirname, "src/brand/private", name);
         if (fs.existsSync(src)) {
           fs.copyFileSync(src, path.join(dir, name));
         }
@@ -26,7 +26,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), privateFaviconOverride()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   server: {
