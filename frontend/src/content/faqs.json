@@ -1,0 +1,42 @@
+[
+  {
+    "q": "Is Tresorpost end-to-end encrypted? Can the server read my files?",
+    "a": "Yes. Your browser seals the payload with XChaCha20-Poly1305 before it is uploaded. The 256-bit key stays in the URL fragment after #, which browsers never send to the server. Tresorpost only stores ciphertext it cannot decrypt."
+  },
+  {
+    "q": "How do I send a password or confidential file securely?",
+    "a": "Create a note on tresorpost.ch, attach the file or paste the password, then share the one-time link. Recipients decrypt in their browser. Use burn-after-reading and a short expiry so the ciphertext disappears after it is opened."
+  },
+  {
+    "q": "What is burn-after-reading / a self-destructing link?",
+    "a": "A Tresorpost link delivers the secret a limited number of times, then the server deletes the ciphertext. You can also set a timer (minutes to a month). Nothing is archived after the last open or when the timer runs out."
+  },
+  {
+    "q": "What can the server see?",
+    "a": "Ciphertext, an expiry timestamp and a counter of remaining opens. No key, no plaintext, no filenames."
+  },
+  {
+    "q": "Do I need an account to share an encrypted file?",
+    "a": "No. There is no sign-up, no analytics and no tracking cookie. Open the site, encrypt in the browser, send the link."
+  },
+  {
+    "q": "Where is this hosted? Is storage in Switzerland?",
+    "a": "Sovereign Swiss infrastructure: the app and object storage run in Zurich, and there is no analytics. Ciphertext is not replicated outside the country. Opening a link still delivers it to the recipient's device, wherever they are. Emailing a share URL sends that message through SMTP."
+  },
+  {
+    "q": "What does “quantum-safe” mean here?",
+    "a": "A 256-bit symmetric key stays far out of reach of Grover's algorithm, the best known quantum attack against it — the effective security only drops to ~128 bits."
+  },
+  {
+    "q": "How large can a file be? Can I send images and video?",
+    "a": "Text, images, video and generic files are supported. Size is limited by the server operator (5 MB by default, more with S3 configured). Text notes have no practical limit."
+  },
+  {
+    "q": "Can I delete a note before it is read?",
+    "a": "Yes — keep the private delete link you get after creating a note, and destroy it at any time."
+  },
+  {
+    "q": "Can I email the link?",
+    "a": "If the operator enabled SMTP, yes — after creating a note you can send the share URL. That message includes the key in the link, so the mail provider can see it. Limited to 3 sends per minute per IP."
+  }
+]

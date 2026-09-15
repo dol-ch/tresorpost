@@ -36,7 +36,7 @@ branding (logos, fonts) lives in a swappable theme layer; see
   with a scannable QR on the result screen. Legacy `#/s/…` links still open.
 - **Light/dark theme**, syntax highlighting, and copy-all / per-code-block copy
   on decrypted text.
-- **Admin dashboard** at `#/admin` (token-protected): creations chart, active
+- **Admin dashboard** at `/admin` (token-protected): creations chart, active
   links, purge expired.
 - **Per-IP create rate limit** (default 60 notes / hour; `CREATE_RATE_LIMIT` /
   `CREATE_RATE_WINDOW_SECS`). Applies to `POST /api/secrets` and
@@ -198,7 +198,7 @@ present — copy `.env.example` to `.env`):
 | `READ_RATE_LIMIT`       | `300`          | Max GET/DELETE `/api/secrets/{id}` per IP per window. `0` disables. |
 | `READ_RATE_WINDOW_SECS` | `3600`         | Read/delete rate-limit window in seconds.                      |
 | `TRUST_PROXY`           | `false`        | Honour `X-Forwarded-For` / `X-Real-IP` (only behind a proxy).  |
-| `ADMIN_TOKEN`           | _(unset)_      | Enables `#/admin` and `/api/admin/*`. Generate with `openssl rand -hex 32`. |
+| `ADMIN_TOKEN`           | _(unset)_      | Enables `/admin` and `/api/admin/*`. Generate with `openssl rand -hex 32`. |
 | `ADMIN_AUTH_MAX_FAILURES` | `10`         | Failed admin logins per IP per window. `0` disables.           |
 | `ADMIN_AUTH_WINDOW_SECS` | `3600`        | Admin-auth failure window in seconds.                          |
 | `SMTP_HOST`               | `smtp.mailgun.org` | SMTP server for optional “email this link”.                |
@@ -231,7 +231,7 @@ the frontend fetches at runtime.
 
 ## Admin dashboard
 
-A lightweight admin dashboard lives at `#/admin` and shows on-disk storage, the
+A lightweight admin dashboard lives at `/admin` and shows on-disk storage, the
 number of active links, a 14-day creations chart, and lifetime totals with a
 breakdown by type. It is protected by an `ADMIN_TOKEN`:
 
@@ -246,6 +246,21 @@ Failed `x-admin-token` values are counted per client IP. After
 `ADMIN_AUTH_MAX_FAILURES` (default 10) in `ADMIN_AUTH_WINDOW_SECS` (default 1
 hour) the endpoints return `429` until the window slides. Successful auth does
 not consume that budget. Set either env var to `0` to disable the limiter.
+
+## Indexing (no trackers)
+
+The product has **no analytics**. Indexing is done with crawlable URLs, not
+with Google Analytics or similar.
+
+- `GET /robots.txt` and `GET /sitemap.xml` (`/`, `/faq`, `/privacy`).
+- Unique `<title>`, description, canonical and Open Graph tags on those paths
+  (the binary rewrites `index.html` for `/faq` and `/privacy` so chat previews
+  are not the homepage card).
+- JSON-LD: `WebApplication` + `Organization` on every page; `FAQPage` on `/faq`.
+- Secret links stay in the URL fragment (`#/v/…`) and are `noindex`.
+
+For Google Search Console, add `https://tresorpost.ch` and submit
+`https://tresorpost.ch/sitemap.xml`.
 
 ## Security
 

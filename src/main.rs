@@ -5,7 +5,7 @@
 //! browser (it travels in the URL fragment), so the server cannot decrypt any
 //! stored payload. It only enforces expiry and view-count limits.
 
-use std::{net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
     extract::DefaultBodyLimit,
@@ -22,6 +22,7 @@ mod mail;
 mod rate;
 mod s3;
 mod secrets;
+mod seo;
 mod uploads;
 
 use common::*;
@@ -203,10 +204,11 @@ async fn main() {
 
     let dist = PathBuf::from(&static_dir);
     if dist.join("index.html").exists() {
-        let index = dist.join("index.html");
-        app = app.fallback_service(ServeDir::new(&dist).fallback(
-            tower_http::services::ServeFile::new(index),
-        ));
+        let index_html = std::fs::read_to_string(dist.join("index.html"))
+            .expect("readable frontend/dist/index.html");
+        app = app.fallback_service(
+            ServeDir::new(&dist).fallback(seo::SpaIndex(Arc::new(index_html))),
+        );
         tracing::info!("serving static frontend from {static_dir}");
     } else {
         tracing::info!("no built frontend at {static_dir}; API only");

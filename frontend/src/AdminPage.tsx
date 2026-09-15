@@ -170,7 +170,7 @@ export function AdminPage() {
         </CardContent>
         <CardFooter>
           <Button variant="ghost" asChild>
-            <a href="#/">Back</a>
+            <a href="/">Back</a>
           </Button>
         </CardFooter>
       </Card>
@@ -314,7 +314,7 @@ export function AdminPage() {
       </Card>
 
       <Button variant="ghost" asChild>
-        <a href="#/">Back to app</a>
+        <a href="/">Back to app</a>
       </Button>
     </div>
   );

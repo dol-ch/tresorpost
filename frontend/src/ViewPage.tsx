@@ -299,7 +299,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
             <AlertDescription>{status.message}</AlertDescription>
           </Alert>
           <Button variant="secondary" asChild>
-            <a href="#/">Go home</a>
+            <a href="/">Go home</a>
           </Button>
         </CardContent>
       </Card>
@@ -359,7 +359,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
             />
           )}
           <Button variant="secondary" asChild>
-            <a href="#/">Create your own</a>
+            <a href="/">Create your own</a>
           </Button>
         </div>
       </CardContent>
@@ -531,7 +531,7 @@ function S3FileView({
             <RecipientDestroy id={id} token={recipientDeleteToken} onDestroyed={onDestroyed} />
           )}
           <Button variant="secondary" asChild>
-            <a href="#/">Create your own</a>
+            <a href="/">Create your own</a>
           </Button>
         </div>
       </CardContent>

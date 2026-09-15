@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import faqs from "./content/faqs.json";
 
 function Step({ num, title, body }: { num: string; title: string; body: string }) {
   return (
@@ -18,13 +20,33 @@ function Step({ num, title, body }: { num: string; title: string; body: string }
 function Qa({ q, a }: { q: string; a: string }) {
   return (
     <div>
-      <div className="mb-1 text-base font-semibold tracking-tight">{q}</div>
+      <h2 className="mb-1 text-base font-semibold tracking-tight">{q}</h2>
       <p className="text-[14.5px] leading-relaxed text-muted-foreground">{a}</p>
     </div>
   );
 }
 
+const FAQS: { q: string; a: string }[] = faqs;
+
 export function FaqPage() {
+  useEffect(() => {
+    const id = "tresorpost-faq-jsonld";
+    const script =
+      document.getElementById(id) ??
+      Object.assign(document.createElement("script"), { id, type: "application/ld+json" });
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: FAQS.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: { "@type": "Answer", text: item.a },
+      })),
+    });
+    if (!script.parentNode) document.head.appendChild(script);
+    return () => script.remove();
+  }, []);
+
   return (
     <>
       <section className="mb-7">
@@ -60,42 +82,17 @@ export function FaqPage() {
 
       <Card>
         <CardContent className="flex flex-col gap-4.5">
-          <Qa
-            q="What can the server see?"
-            a="Ciphertext, an expiry timestamp and a counter of remaining opens. No key, no plaintext, no filenames."
-          />
-          <div className="h-px bg-border" />
-          <Qa
-            q={"What does “quantum-safe” mean here?"}
-            a="A 256-bit symmetric key stays far out of reach of Grover's algorithm, the best known quantum attack against it — the effective security only drops to ~128 bits."
-          />
-          <div className="h-px bg-border" />
-          <Qa
-            q="How large can a file be?"
-            a="Images, video and files are limited by the server operator (5 MB by default, more with S3 configured). Text notes have no practical limit."
-          />
-          <div className="h-px bg-border" />
-          <Qa
-            q="Can I delete a note before it is read?"
-            a="Yes — keep the private delete link you get after creating a note, and destroy it at any time."
-          />
-          <div className="h-px bg-border" />
-          <Qa q="Do I need an account?" a="No. There is no sign-up, no analytics and no tracking cookie." />
-          <div className="h-px bg-border" />
-          <Qa
-            q="Can I email the link?"
-            a="If the operator enabled SMTP, yes — after creating a note you can send the share URL. That message includes the key in the link, so the mail provider can see it. Limited to 3 sends per minute per IP."
-          />
-          <div className="h-px bg-border" />
-          <Qa
-            q="Where is this hosted?"
-            a="Sovereign Swiss infrastructure: the app and object storage run in Zurich, and there is no analytics. Ciphertext is not replicated outside the country. Opening a link still delivers it to the recipient's device, wherever they are. Emailing a share URL sends that message through SMTP (see above)."
-          />
+          {FAQS.map((item, i) => (
+            <div key={item.q}>
+              {i > 0 ? <div className="mb-4.5 h-px bg-border" /> : null}
+              <Qa q={item.q} a={item.a} />
+            </div>
+          ))}
         </CardContent>
       </Card>
 
       <Button className="mt-5 w-full max-w-70" asChild>
-        <a href="#/">Send a secret</a>
+        <a href="/">Send a secret</a>
       </Button>
     </>
   );

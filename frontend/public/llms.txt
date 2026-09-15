@@ -1,0 +1,12 @@
+# Tresorpost
+
+End-to-end encrypted, burn-after-reading transfer for text, images, video and files.
+
+- Site: https://tresorpost.ch/
+- Source: https://github.com/dol-ch/tresorpost
+- How it works: https://tresorpost.ch/faq
+- Privacy: https://tresorpost.ch/privacy
+
+Encryption (XChaCha20-Poly1305) happens in the browser. The 256-bit key stays in the URL fragment and is never sent to the server. Ciphertext is hosted in Zurich, Switzerland. No accounts, no analytics.
+
+Use it to send a password, confidential document, image or video as a self-destructing link.

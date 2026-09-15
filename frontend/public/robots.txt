@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /#/v/
+Disallow: /#/d/
+
+Sitemap: https://tresorpost.ch/sitemap.xml

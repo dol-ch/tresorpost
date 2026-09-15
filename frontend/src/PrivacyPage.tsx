@@ -125,7 +125,7 @@ export function PrivacyPage() {
       )}
 
       <Button className="mt-5 w-full max-w-70" asChild>
-        <a href="#/">Send a secret</a>
+        <a href="/">Send a secret</a>
       </Button>
     </>
   );

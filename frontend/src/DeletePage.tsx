@@ -64,7 +64,7 @@ export function DeletePage({ id, token }: { id: string; token: string }) {
           {busy ? "Deleting…" : "Yes, delete it"}
         </Button>
         <Button variant="secondary" asChild>
-          <a href="#/">Cancel</a>
+          <a href="/">Cancel</a>
         </Button>
       </CardContent>
     </Card>
