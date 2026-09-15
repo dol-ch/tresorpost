@@ -33,6 +33,12 @@ function progressPct(done: number, total: number) {
   return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
 }
 
+function kindNoun(kind: Exclude<SecretKind, "text">): string {
+  if (kind === "image") return "Image";
+  if (kind === "video") return "Video";
+  return "File";
+}
+
 function optionsSummary(opts: {
   limitViews: boolean;
   maxViews: number;
@@ -50,7 +56,8 @@ function optionsSummary(opts: {
 
 export function CreatePage() {
   const [file, setFile] = useState<File | null>(null);
-  const kind: SecretKind = file ? kindFromFile(file) : "text";
+  const fileKind = file ? kindFromFile(file) : null;
+  const kind: SecretKind = fileKind ?? "text";
   const [expiresIn, setExpiresIn] = useState<number>(EXPIRY_OPTIONS[1].seconds);
   const [limitViews, setLimitViews] = useState(false);
   const [maxViews, setMaxViews] = useState<number>(1);
@@ -79,6 +86,7 @@ export function CreatePage() {
   const editorRef = useRef<EditorHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [composeDrag, setComposeDrag] = useState(false);
+  const [editorEmpty, setEditorEmpty] = useState(true);
 
   useEffect(() => {
     fetchConfig()
@@ -401,28 +409,37 @@ export function CreatePage() {
             if (dropped) takeFile(dropped);
           }}
         >
-          {file ? (
-            <div className="flex items-center gap-3 px-4 py-4">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[15px] font-medium">{file.name}</div>
-                <div className="text-[13px] text-muted-foreground">
-                  {kind === "image" ? "Image" : kind === "video" ? "Video" : "File"} ·{" "}
-                  {humanSize(file.size)}
+          {file && (
+            <div className="flex flex-col gap-2 px-4 py-4">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[15px] font-medium">{file.name}</div>
+                  <div className="text-[13px] text-muted-foreground">
+                    {fileKind ? kindNoun(fileKind) : "File"} · {humanSize(file.size)} · encrypted in your
+                    browser
+                  </div>
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Remove file"
+                  onClick={() => takeFile(null)}
+                >
+                  <X />
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Remove file"
-                onClick={() => takeFile(null)}
-              >
-                <X />
-              </Button>
+              {!editorEmpty && (
+                <p className="text-[13px] text-muted-foreground">
+                  One note holds one thing. Your text is kept aside — remove the
+                  file to get it back
+                </p>
+              )}
             </div>
-          ) : (
-            <RichTextEditor ref={editorRef} />
           )}
+          <div className={file ? "hidden" : undefined}>
+            <RichTextEditor ref={editorRef} onEmptyChange={setEditorEmpty} />
+          </div>
           <div className="flex items-center justify-between gap-3 border-t border-border px-3.5 py-2.5">
             <button
               type="button"
@@ -433,7 +450,9 @@ export function CreatePage() {
               {file ? "Replace file" : "Attach a file"}
             </button>
             <span className="truncate text-[12.5px] text-muted-foreground">
-              Image, video or file · up to {fileMaxLabel}
+              {fileKind
+                ? `Sent as ${fileKind}`
+                : `Image, video or file · up to ${fileMaxLabel}`}
             </span>
             <input
               ref={fileInputRef}

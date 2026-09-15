@@ -28,9 +28,18 @@ export interface EditorHandle {
   isEmpty: () => boolean;
 }
 
-export const RichTextEditor = forwardRef<EditorHandle>((_props, ref) => {
+function docIsEmpty(doc: EditorState["doc"]): boolean {
+  return doc.childCount === 1 && doc.firstChild?.content.size === 0;
+}
+
+export const RichTextEditor = forwardRef<
+  EditorHandle,
+  { onEmptyChange?: (empty: boolean) => void }
+>(({ onEmptyChange }, ref) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const onEmptyChangeRef = useRef(onEmptyChange);
+  onEmptyChangeRef.current = onEmptyChange;
   const [view, setView] = useState<EditorView | null>(null);
   // Bumped on every transaction so the toolbar re-computes active/enabled state.
   const [, forceRender] = useReducer((n: number) => n + 1, 0);
@@ -48,13 +57,14 @@ export const RichTextEditor = forwardRef<EditorHandle>((_props, ref) => {
       state,
       dispatchTransaction(tr) {
         v.updateState(v.state.apply(tr));
-        const doc = v.state.doc;
-        const empty = doc.childCount === 1 && doc.firstChild?.content.size === 0;
+        const empty = docIsEmpty(v.state.doc);
         v.dom.classList.toggle("is-empty", empty);
+        onEmptyChangeRef.current?.(empty);
         forceRender();
       },
     });
     v.dom.classList.add("is-empty");
+    onEmptyChangeRef.current?.(true);
     viewRef.current = v;
     setView(v);
     return () => {
@@ -77,8 +87,7 @@ export const RichTextEditor = forwardRef<EditorHandle>((_props, ref) => {
     isEmpty: () => {
       const v = viewRef.current;
       if (!v) return true;
-      const doc = v.state.doc;
-      return doc.childCount === 1 && doc.firstChild?.content.size === 0;
+      return docIsEmpty(v.state.doc);
     },
   }));
 
