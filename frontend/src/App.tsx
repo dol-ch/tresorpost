@@ -76,6 +76,9 @@ export function App() {
 
   const Wordmark = brand.Wordmark;
   const sendActive = route.name === "create" || route.name === "view" || route.name === "delete";
+  const sourceHref =
+    brand.footerLinks.find((l) => /github\.com/i.test(l.href))?.href ??
+    brand.footerLinks[0]?.href;
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
@@ -123,10 +126,18 @@ export function App() {
                   <Badge variant="secondary">256-bit · quantum-safe</Badge>
                   <Badge variant="secondary">Zero-knowledge server</Badge>
                   <Badge variant="secondary">No analytics</Badge>
+                  <Badge variant="secondary">Swiss .ch</Badge>
                   <Badge variant="secondary" className="gap-1.5">
                     <SwissFlag />
-                    Swiss .ch · hosted in Switzerland
+                    Hosted in Switzerland
                   </Badge>
+                  {sourceHref && (
+                    <Badge variant="secondary" asChild>
+                      <a href={sourceHref} target="_blank" rel="noreferrer">
+                        Open Source
+                      </a>
+                    </Badge>
+                  )}
                 </div>
               </section>
               <CreatePage />
