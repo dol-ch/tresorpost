@@ -1,9 +1,5 @@
 //! End-to-end encrypted, burn-after-reading transfer service.
 //!
-//! The server is intentionally "blind": it only ever stores opaque ciphertext
-//! and a nonce produced by the client. The symmetric key never leaves the
-//! browser (it travels in the URL fragment), so the server cannot decrypt any
-//! stored payload. It only enforces expiry and view-count limits.
 
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 

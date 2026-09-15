@@ -1,14 +1,5 @@
 //! Optional S3-compatible storage backend for large files.
 //!
-//! When the `S3_*` environment variables are configured, `kind=file` (and
-//! `image` / `video`) uploads are streamed **directly** from the browser to S3 using
-//! presigned multipart-upload URLs. The server never sees the file bytes — it
-//! only orchestrates the multipart lifecycle (init → per-part presign →
-//! complete) and issues short-lived presigned GET URLs for download. The bytes
-//! stay end-to-end encrypted: S3 only ever stores ciphertext chunks.
-//!
-//! This module is entirely inert unless `S3_ENDPOINT` (and the bucket/keys) are
-//! set, so the default deployment behaves exactly as before.
 
 use std::time::Duration;
 
@@ -19,19 +10,14 @@ use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
 use rand::RngExt;
 
-/// A configured S3 backend. Cloned cheaply (the inner `Client` is an `Arc`).
 #[derive(Clone)]
 pub struct S3Backend {
     client: Client,
     bucket: String,
-    /// Maximum accepted raw (plaintext) file size in bytes.
     pub max_file_bytes: i64,
-    /// Lifetime of presigned upload/download URLs. Also the grace window a
-    /// burned object stays around so an in-flight download can finish.
     pub url_ttl: Duration,
 }
 
-/// One completed multipart part reported back by the client.
 pub struct PartRef {
     pub part_number: i32,
     pub etag: String,

@@ -16,11 +16,8 @@ use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::s3::S3Backend;
 
-/// Alphabet for short share IDs (URL-safe, no look-alike separators).
 pub(crate) const ID_ALPHABET: &[u8] =
     b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-/// Short-ID length. 62^12 ≈ 3.2e21 (~71 bits): unguessable, collision-free at
-/// any realistic volume, yet far shorter than a 36-char UUID.
 pub(crate) const ID_LEN: usize = 12;
 
 pub(crate) fn generate_id() -> String {
@@ -30,7 +27,6 @@ pub(crate) fn generate_id() -> String {
         .collect()
 }
 
-/// 32-byte creator delete token (URL-safe, unpadded). Shown once at create time.
 pub(crate) fn generate_delete_token() -> String {
     let mut bytes = [0u8; 32];
     rand::rng().fill(&mut bytes);
@@ -42,7 +38,6 @@ pub(crate) fn hash_delete_token(token: &str) -> String {
     hex_encode(&digest)
 }
 
-/// Constant-time compare of a presented token against a stored SHA-256 hex hash.
 pub(crate) fn delete_token_matches(stored_hash: &str, presented: &str) -> bool {
     if stored_hash.len() != 64 {
         return false;
@@ -51,8 +46,6 @@ pub(crate) fn delete_token_matches(stored_hash: &str, presented: &str) -> bool {
     bool::from(got.as_bytes().ct_eq(stored_hash.as_bytes()))
 }
 
-/// Constant-time equality for secret strings (admin token). Hashes first so
-/// length does not leak via early-exit byte compares.
 pub(crate) fn constant_time_eq_str(a: &str, b: &str) -> bool {
     let ha = Sha256::digest(a.as_bytes());
     let hb = Sha256::digest(b.as_bytes());
@@ -92,10 +85,6 @@ pub(crate) const MIN_EXPIRES: i64 = 60;
 /// Largest allowed lifetime (seconds). UI maximum is ~1 month (31 days).
 pub(crate) const MAX_EXPIRES: i64 = 31 * 24 * 3600;
 
-/// Derive the encrypted-payload limits from a raw file-size limit. A raw file
-/// becomes base64 (~4/3) inside the JSON payload, is encrypted, and the
-/// ciphertext is base64-encoded again — roughly ~1.8× overall — so we allow 2×
-/// plus a fixed buffer for JSON framing and text/image payloads.
 pub(crate) fn derive_limits(max_file_bytes: u64) -> (usize, usize) {
     let body = (max_file_bytes * 2 + 2 * 1024 * 1024) as usize; // request body cap
     let ciphertext = (max_file_bytes * 2 + 256 * 1024) as usize; // ciphertext char cap
@@ -156,7 +145,7 @@ pub(crate) fn normalize_kind(kind: &Option<String>) -> &'static str {
     }
 }
 
-/// Increment a lifetime counter (creating it if absent).
+
 pub(crate) async fn bump(pool: &SqlitePool, name: &str, delta: i64) {
     let _ = sqlx::query(
         "INSERT INTO metrics (name, value) VALUES (?, ?) \

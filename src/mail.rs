@@ -235,9 +235,6 @@ fn is_loopback_host(host: &str) -> bool {
     matches!(host, "localhost" | "127.0.0.1" | "::1") || host.starts_with("127.")
 }
 
-/// Accept the share URL if its host matches PUBLIC_URL, the browser Origin,
-/// X-Forwarded-Host, or Host. Loopback Host (docker/nginx to 127.0.0.1:7777)
-/// is ignored so it does not reject https://tresorpost.ch links.
 pub(crate) fn share_url_allowed(url: &str, headers: &HeaderMap) -> bool {
     let Some(url_host) = origin_host(url) else {
         return false;

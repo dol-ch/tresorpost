@@ -20,7 +20,7 @@ const SWEEP_SECS: u64 = 60;
 /// List-and-reap orphan S3 keys every N sweeps (~5 minutes at 60s).
 const ORPHAN_REAP_EVERY_N: u64 = 5;
 
-/// Result of an explicit destroy (creator/recipient delete).
+/// Result of explicit destruction (creator/recipient delete).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DestroyOutcome {
     Deleted,
@@ -340,9 +340,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
         .execute(&pool)
         .await
         .ok();
-
-    // Columns added after the initial schema; ignore "duplicate column" errors
-    // so this stays a no-op on an already-migrated database.
+    
     sqlx::query("ALTER TABLE secrets ADD COLUMN kind TEXT")
         .execute(&pool)
         .await
@@ -351,13 +349,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
         .execute(&pool)
         .await
         .ok();
-
-    // S3 large-file backend columns. `storage` distinguishes 'sqlite' (default,
-    // ciphertext stored inline) from 's3' (ciphertext lives in the object
-    // store). For s3 rows, `status` moves from 'pending' to 'ready' once the
-    // multipart upload completes; `meta` carries opaque client stream params.
-    // `purge_after` is a deferred-delete deadline (burned S3 objects, stale
-    // pending uploads) so the sweeper can drop the object before the row.
+    
     for stmt in [
         "ALTER TABLE secrets ADD COLUMN storage TEXT NOT NULL DEFAULT 'sqlite'",
         "ALTER TABLE secrets ADD COLUMN status TEXT NOT NULL DEFAULT 'ready'",
@@ -375,8 +367,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
         .execute(&pool)
         .await
         .ok();
-
-    // Lifetime counters that persist even after secrets are burned or expire.
+    
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS metrics (\
             name TEXT PRIMARY KEY,\
@@ -386,8 +377,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
     .execute(&pool)
     .await
     .expect("failed to create metrics table");
-
-    // Per-day creation time series (UTC), persists after secrets are removed.
+    
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS daily_stats (\
             day TEXT PRIMARY KEY,\
@@ -402,7 +392,6 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
     pool
 }
 
-/// All-time counters from the `metrics` table (O(rows in metrics), not a secrets scan).
 pub(crate) async fn load_metrics(pool: &SqlitePool) -> HashMap<String, i64> {
     let mut m: HashMap<String, i64> = HashMap::new();
     if let Ok(rows) = sqlx::query("SELECT name, value FROM metrics")

@@ -34,8 +34,6 @@ pub(crate) struct ConfigResp {
     short_origin: Option<String>,
 }
 
-/// Public runtime config so the frontend enforces the same limit as the server
-/// without a rebuild.
 pub(crate) async fn config(State(state): State<AppState>) -> Json<ConfigResp> {
     Json(ConfigResp {
         max_file_bytes: state.max_file_bytes,
@@ -56,7 +54,6 @@ pub(crate) struct PublicStats {
     by_kind: std::collections::HashMap<String, i64>,
 }
 
-/// Public aggregate lifetime stats. Reads the `metrics` counters — no secrets table scan.
 pub(crate) async fn public_stats(State(state): State<AppState>) -> Json<PublicStats> {
     Json(public_stats_from_metrics(crate::db::load_metrics(&state.pool).await))
 }

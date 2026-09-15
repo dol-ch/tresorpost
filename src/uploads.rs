@@ -82,9 +82,6 @@ pub(crate) async fn upload_init(
 
     let now = now_secs();
     let secret_expires_at = now + req.expires_in;
-    // Cap pending-row expiry so abandoned multipart cannot sit for 31 days.
-    // The intended secret TTL is restored on complete from `nonce` (unused on
-    // the S3 path while status is pending).
     let expires_at = crate::db::pending_expires_at(
         now,
         req.expires_in,

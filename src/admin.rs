@@ -13,9 +13,6 @@ use sqlx::Row;
 use crate::common::*;
 use crate::db::{db_file_bytes, purge_expired};
 
-/// Validate the `x-admin-token` header against the configured token. Returns an
-/// error response when admin is disabled or the token is wrong. Failed attempts
-/// are rate-limited per client IP (see `AdminAuthLimiter`).
 pub(crate) fn check_admin(
     state: &AppState,
     headers: &HeaderMap,
@@ -81,9 +78,6 @@ pub(crate) struct StorageStats {
     active_bytes: i64,
 }
 
-/// Protected admin dashboard stats. Requires the `x-admin-token` header to match
-/// the server's `ADMIN_TOKEN`. Only aggregate metadata is exposed — never any
-/// ciphertext or key material.
 pub(crate) async fn admin_stats(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -173,7 +167,6 @@ pub(crate) struct PurgeResp {
     purged: u64,
 }
 
-/// Admin action: delete all currently-expired secrets immediately.
 pub(crate) async fn admin_purge(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -211,8 +204,6 @@ pub(crate) struct ActiveResp {
     total: i64,
 }
 
-/// Admin listing of currently-active secrets with their TTL, soonest-expiring
-/// first. Exposes only metadata (never ciphertext or keys).
 pub(crate) async fn admin_active(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
