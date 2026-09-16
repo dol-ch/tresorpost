@@ -2804,7 +2804,7 @@ dependencies = [
 
 [[package]]
 name = "tresorpost"
-version = "0.1.24"
+version = "0.1.25"
 dependencies = [
  "aws-config",
  "aws-credential-types",
