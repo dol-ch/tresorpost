@@ -3,7 +3,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { fetchConfig } from "./api";
 import { MAX_FILE_BYTES, humanSize, uploadMaxBytes } from "./options";
-import faqs from "./content/faqs.json";
+import { useI18n, useT } from "./i18n";
+import faqsDe from "./content/faqs.de.json";
+import faqsEn from "./content/faqs.en.json";
+import faqsUk from "./content/faqs.uk.json";
+import type { Locale } from "./i18n";
 
 function Step({ num, title, body }: { num: string; title: string; body: string }) {
   return (
@@ -28,13 +32,20 @@ function Qa({ q, a }: { q: string; a: string }) {
   );
 }
 
-const FAQS: { q: string; a: string }[] = faqs;
-const SIZE_Q = "How large can a file be? Can I send images and video?";
+const FAQ_BY_LOCALE: Record<Locale, { q: string; a: string }[]> = {
+  de: faqsDe,
+  en: faqsEn,
+  uk: faqsUk,
+};
 
 export function FaqPage() {
-  const [items, setItems] = useState(FAQS);
+  const t = useT();
+  const { locale } = useI18n();
+  const base = FAQ_BY_LOCALE[locale];
+  const [items, setItems] = useState(base);
 
   useEffect(() => {
+    setItems(base);
     fetchConfig()
       .then((cfg) => {
         const cap = uploadMaxBytes(
@@ -42,13 +53,14 @@ export function FaqPage() {
           cfg.max_s3_file_bytes,
           cfg.max_file_bytes || MAX_FILE_BYTES,
         );
-        const a = `Text, images, video and generic files are supported, up to ${humanSize(cap)} per file. Text notes have no practical size limit.`;
-        setItems(FAQS.map((item) => (item.q === SIZE_Q ? { ...item, a } : item)));
+        const a = t("faq.sizeA", { cap: humanSize(cap) });
+        const q = t("faq.sizeQ");
+        setItems(base.map((item) => (item.q === q ? { ...item, a } : item)));
       })
       .catch(() => {
         /* keep the static answer */
       });
-  }, []);
+  }, [base, t]);
 
   useEffect(() => {
     const id = "tresorpost-faq-jsonld";
@@ -72,32 +84,20 @@ export function FaqPage() {
     <>
       <section className="mb-7">
         <h1 className="mb-3.5 font-heading text-[clamp(27px,7.6vw,40px)] leading-[1.1] font-extrabold tracking-tight">
-          How it works
+          {t("faq.title")}
         </h1>
         <p className="max-w-[48ch] text-[17px] leading-snug text-muted-foreground">
-          Three steps, no account, nothing readable ever leaves your device.
+          {t("faq.lead")}
         </p>
       </section>
 
       <Card className="mb-4">
         <CardContent className="flex flex-col gap-4.5">
-          <Step
-            num="1"
-            title="You write, your browser encrypts"
-            body="A random 256-bit key is generated on your device and never sent anywhere. The server only ever receives ciphertext."
-          />
+          <Step num="1" title={t("faq.step1t")} body={t("faq.step1b")} />
           <div className="h-px bg-border" />
-          <Step
-            num="2"
-            title="The key travels in the link"
-            body="Everything after the # stays in the browser — it is never part of the request. Send the link over any channel you already trust."
-          />
+          <Step num="2" title={t("faq.step2t")} body={t("faq.step2b")} />
           <div className="h-px bg-border" />
-          <Step
-            num="3"
-            title="It opens once, then disappears"
-            body="After the last allowed open, or when the timer runs out, the ciphertext is deleted. Nothing is archived."
-          />
+          <Step num="3" title={t("faq.step3t")} body={t("faq.step3b")} />
         </CardContent>
       </Card>
 
@@ -113,7 +113,7 @@ export function FaqPage() {
       </Card>
 
       <Button className="mt-5 w-full max-w-70" asChild>
-        <a href="/">Send a secret</a>
+        <a href="/">{t("faq.send")}</a>
       </Button>
     </>
   );

@@ -18,6 +18,7 @@ import { createSecret, fetchConfig, sendShareEmail } from "./api";
 import { uploadLargeFile } from "./largeFile";
 import { EXPIRY_OPTIONS, MAX_FILE_BYTES, humanSize, uploadMaxBytes } from "./options";
 import { copyText } from "./clipboard";
+import { useT, type Translate } from "./i18n";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,10 +34,10 @@ function progressPct(done: number, total: number) {
   return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
 }
 
-function kindNoun(kind: Exclude<SecretKind, "text">): string {
-  if (kind === "image") return "Image";
-  if (kind === "video") return "Video";
-  return "File";
+function kindNoun(kind: Exclude<SecretKind, "text">, t: Translate): string {
+  if (kind === "image") return t("create.kindImage");
+  if (kind === "video") return t("create.kindVideo");
+  return t("create.kindFile");
 }
 
 function dataTransferHasFiles(dt: DataTransfer | null): boolean {
@@ -49,22 +50,28 @@ function firstDroppedFile(dt: DataTransfer | null): File | null {
   return dt?.files?.[0] ?? null;
 }
 
-function optionsSummary(opts: {
-  limitViews: boolean;
-  maxViews: number;
-  allowDelete: boolean;
-  allowRecipientDelete: boolean;
-}): string {
+function optionsSummary(
+  opts: {
+    limitViews: boolean;
+    maxViews: number;
+    allowDelete: boolean;
+    allowRecipientDelete: boolean;
+  },
+  t: Translate,
+): string {
   const bits: string[] = [];
   if (opts.limitViews) {
-    bits.push(opts.maxViews === 1 ? "max 1 open" : `max ${opts.maxViews} opens`);
+    bits.push(
+      opts.maxViews === 1 ? t("create.optMax1") : t("create.optMaxN", { n: opts.maxViews }),
+    );
   }
-  if (opts.allowDelete) bits.push("delete link");
-  if (opts.allowRecipientDelete) bits.push("recipient can delete");
-  return bits.length ? bits.join(" · ") : "Defaults";
+  if (opts.allowDelete) bits.push(t("create.optDeleteLink"));
+  if (opts.allowRecipientDelete) bits.push(t("create.optRecipientDelete"));
+  return bits.length ? bits.join(" · ") : t("create.optDefaults");
 }
 
 export function CreatePage() {
+  const t = useT();
   const [file, setFile] = useState<File | null>(null);
   const fileKind = file ? kindFromFile(file) : null;
   const kind: SecretKind = fileKind ?? "text";
@@ -168,13 +175,13 @@ export function CreatePage() {
     if (kind === "text") {
       const html = editorRef.current?.getHTML() ?? "";
       if (!html || editorRef.current?.isEmpty()) {
-        throw new Error("Write something before creating a link.");
+        throw new Error(t("create.writeFirst"));
       }
       return { kind: "text", data: html };
     }
-    if (!file) throw new Error("Choose a file first.");
+    if (!file) throw new Error(t("create.chooseFile"));
     if (file.size > uploadMax) {
-      throw new Error(`File is too large (${humanSize(file.size)}). Max is ${maxLabel}.`);
+      throw new Error(t("create.tooLarge", { size: humanSize(file.size), cap: maxLabel }));
     }
     const data = await fileToBase64(file);
     return { kind, data, filename: file.name, mime: mimeForUpload(file, kind) };
@@ -191,9 +198,9 @@ export function CreatePage() {
       let recipientDeleteToken: string | undefined;
 
       if (useS3) {
-        if (!file) throw new Error("Choose a file first.");
+        if (!file) throw new Error(t("create.chooseFile"));
         if (file.size > uploadMax) {
-          throw new Error(`File is too large (${humanSize(file.size)}). Max is ${maxLabel}.`);
+          throw new Error(t("create.tooLarge", { size: humanSize(file.size), cap: maxLabel }));
         }
         const ac = new AbortController();
         abortRef.current = ac;
@@ -246,7 +253,7 @@ export function CreatePage() {
       const msg = e instanceof Error ? e.message : String(e);
       const failed =
         /failed to fetch|networkerror|load failed/i.test(msg)
-          ? "Could not reach the server. If this is a large image, the reverse proxy may be rejecting the body — configure S3 or raise client_max_body_size."
+          ? t("create.networkFail")
           : msg;
       setError(failed);
     } finally {
@@ -259,7 +266,7 @@ export function CreatePage() {
   function takeFile(next: File | null) {
     setError(null);
     if (next && next.size > uploadMax) {
-      setError(`File is too large (${humanSize(next.size)}). Max is ${maxLabel}.`);
+      setError(t("create.tooLarge", { size: humanSize(next.size), cap: maxLabel }));
     }
     setFile(next);
     if (next) setEditorOpen(false);
@@ -301,26 +308,23 @@ export function CreatePage() {
     return (
       <Card>
         <CardContent className="flex flex-col gap-3">
-          <Kicker>Share</Kicker>
+          <Kicker>{t("share.kicker")}</Kicker>
           <h2 className="-mt-1 font-heading text-2xl font-bold tracking-tight">
-            Your encrypted link is ready
+            {t("share.title")}
           </h2>
           <p className="-mt-2 text-[14.5px] text-muted-foreground">
-            Send it any way you like — or let them scan the code. The
-            quantum-safe 256-bit key lives only after the{" "}
-            <code className="font-mono text-xs">#</code> and never reaches the
-            server.
+            {t("share.lead")}
           </p>
 
           {qr && (
             <div className="flex flex-col items-center gap-2 py-1">
               <img
                 src={qr}
-                alt="QR code for the encrypted link"
+                alt={t("share.qrAlt")}
                 className="size-[150px] rounded-[16px] bg-muted p-2.5"
               />
               <p className="-mt-1.5 text-[12.5px] font-semibold tracking-[0.03em] text-muted-foreground uppercase">
-                Scan to open
+                {t("share.scan")}
               </p>
             </div>
           )}
@@ -337,11 +341,11 @@ export function CreatePage() {
                 }
               }}
             >
-              {copied ? "Copied" : "Copy"}
+              {copied ? t("share.copied") : t("share.copy")}
             </Button>
             <Button variant="secondary" className="min-w-0 flex-1" asChild>
               <a href={shareUrl} target="_blank" rel="noreferrer">
-                Open
+                {t("share.open")}
               </a>
             </Button>
           </div>
@@ -349,7 +353,7 @@ export function CreatePage() {
           {emailEnabled && (
             <>
               <div className="mt-0.5 h-px bg-border" />
-              <Kicker>Email this link</Kicker>
+              <Kicker>{t("share.emailKicker")}</Kicker>
               <form
                 className="flex flex-col gap-2"
                 onSubmit={async (e) => {
@@ -386,14 +390,14 @@ export function CreatePage() {
                     className="min-w-0 flex-1"
                   />
                   <Button type="submit" className="shrink-0 px-4" disabled={emailBusy}>
-                    {emailBusy ? "Sending…" : "Send"}
+                    {emailBusy ? t("share.sending") : t("share.send")}
                   </Button>
                 </div>
                 {emailError && (
                   <p className="text-[13px] text-destructive">{emailError}</p>
                 )}
                 {emailSent && !emailError && (
-                  <p className="text-[13px] text-muted-foreground">Sent.</p>
+                  <p className="text-[13px] text-muted-foreground">{t("share.sent")}</p>
                 )}
               </form>
             </>
@@ -402,9 +406,9 @@ export function CreatePage() {
           {deleteUrl && (
             <>
               <div className="mt-0.5 h-px bg-border" />
-              <Kicker>Delete this note</Kicker>
+              <Kicker>{t("share.deleteKicker")}</Kicker>
               <p className="-mt-3 text-[13px] text-muted-foreground">
-                Keep this private — it destroys the ciphertext before anyone opens it.
+                {t("share.deleteLead")}
               </p>
               <Input readOnly value={deleteUrl} className="font-mono text-[13px]" />
               <div className="flex gap-2">
@@ -418,10 +422,10 @@ export function CreatePage() {
                     }
                   }}
                 >
-                  {copiedDelete ? "Copied" : "Copy"}
+                  {copiedDelete ? t("share.copied") : t("share.copy")}
                 </Button>
                 <Button variant="destructive" className="min-w-0 flex-1" asChild>
-                  <a href={deleteUrl}>Delete</a>
+                  <a href={deleteUrl}>{t("share.delete")}</a>
                 </Button>
               </div>
             </>
@@ -437,7 +441,7 @@ export function CreatePage() {
               setEditorOpen(false);
             }}
           >
-            Create another
+            {t("share.another")}
           </button>
         </CardContent>
       </Card>
@@ -469,15 +473,14 @@ export function CreatePage() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-medium">{file.name}</div>
                   <div className="text-[13px] text-muted-foreground">
-                    {fileKind ? kindNoun(fileKind) : "File"} · {humanSize(file.size)} · encrypted in your
-                    browser
+                    {fileKind ? kindNoun(fileKind, t) : t("create.kindFile")} · {humanSize(file.size)} · {t("create.encryptedInBrowser")}
                   </div>
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Remove file"
+                  aria-label={t("create.removeFile")}
                   onClick={() => {
                     takeFile(null);
                     setEditorOpen(!editorEmpty);
@@ -490,8 +493,7 @@ export function CreatePage() {
                 <p className="flex items-start gap-2 text-[13px] text-destructive">
                   <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.8} />
                   <span>
-                    One note holds one thing. Go back and delete your text, or it
-                    will be lost.
+                    {t("create.oneThing")}
                   </span>
                 </p>
               )}
@@ -500,8 +502,8 @@ export function CreatePage() {
             <textarea
               readOnly
               rows={5}
-              placeholder={`Write a message, or drop a file here (up to ${maxLabel})…`}
-              aria-label="Write a message"
+              placeholder={t("create.placeholder", { cap: maxLabel })}
+              aria-label={t("create.ariaWrite")}
               className="min-h-[140px] w-full resize-none border-0 bg-transparent p-3.5 text-[15px] leading-relaxed outline-none placeholder:text-muted-foreground"
               onFocus={() => setEditorOpen(true)}
             />
@@ -511,6 +513,7 @@ export function CreatePage() {
               <RichTextEditor
                 ref={editorRef}
                 autoFocus={!file}
+                placeholder={t("editor.placeholder")}
                 onEmptyChange={setEditorEmpty}
                 onBlurAway={() => {
                   if (file) return;
@@ -530,22 +533,24 @@ export function CreatePage() {
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Paperclip className="size-4" strokeWidth={1.8} />
-                Replace file
+                {t("create.replace")}
               </Button>
             ) : (
               <button
                 type="button"
                 className="inline-flex min-w-0 items-center gap-2 rounded-[10px] px-1.5 py-1 text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-                aria-label={`Attach a file, up to ${maxLabel}`}
+                aria-label={t("create.attachAria", { cap: maxLabel })}
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Paperclip className="size-4 shrink-0" strokeWidth={1.8} />
-                Attach a file
-                <span className="font-normal text-muted-foreground/75">up to {maxLabel}</span>
+                {t("create.attach")}
+                <span className="font-normal text-muted-foreground/75">{t("create.upTo", { cap: maxLabel })}</span>
               </button>
             )}
             <span className="truncate text-[12.5px] text-muted-foreground">
-              {fileKind ? `Sent as ${fileKind}` : "Sent as text"}
+              {fileKind
+                ? t("create.sentAs", { kind: kindNoun(fileKind, t) })
+                : t("create.sentAsText")}
             </span>
             <input
               ref={fileInputRef}
@@ -560,12 +565,17 @@ export function CreatePage() {
         </div>
 
         <div>
-          <Kicker className="mb-2">Self-destruct after</Kicker>
+          <Kicker className="mb-2">{t("create.selfDestruct")}</Kicker>
           <Segmented
-            aria-label="Self-destruct after"
+            aria-label={t("create.selfDestruct")}
             value={expiresIn}
             onChange={setExpiresIn}
-            options={EXPIRY_OPTIONS.map((o) => ({ value: o.seconds, label: o.label }))}
+            options={EXPIRY_OPTIONS.map((o, i) => ({
+              value: o.seconds,
+              label: t(
+                (["create.expiry5min", "create.expiry1hour", "create.expiry1day", "create.expiry7days"] as const)[i],
+              ),
+            }))}
           />
         </div>
 
@@ -576,7 +586,7 @@ export function CreatePage() {
             aria-expanded={optionsOpen}
             onClick={() => setOptionsOpen((open) => !open)}
           >
-            <span className="text-[15px] font-medium">Options</span>
+            <span className="text-[15px] font-medium">{t("create.options")}</span>
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate text-[13px] text-muted-foreground">
                 {optionsSummary({
@@ -584,7 +594,7 @@ export function CreatePage() {
                   maxViews,
                   allowDelete,
                   allowRecipientDelete,
-                })}
+                }, t)}
               </span>
               <ChevronDown
                 className={
@@ -599,7 +609,7 @@ export function CreatePage() {
           {optionsOpen && (
             <div className="flex flex-col gap-4 border-t border-border px-4 py-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-[15px] font-medium">Limit number of opens</div>
+                <div className="text-[15px] font-medium">{t("create.limitOpens")}</div>
                 <Switch checked={limitViews} onCheckedChange={setLimitViews} />
               </div>
               {limitViews && (
@@ -615,14 +625,14 @@ export function CreatePage() {
               <div className="h-px bg-border" />
 
               <div className="flex items-center justify-between gap-3">
-                <div className="text-[15px] font-medium">Keep a private delete link</div>
+                <div className="text-[15px] font-medium">{t("create.keepDeleteLink")}</div>
                 <Switch checked={allowDelete} onCheckedChange={setAllowDelete} />
               </div>
 
               <div className="h-px bg-border" />
 
               <div className="flex items-center justify-between gap-3">
-                <div className="text-[15px] font-medium">Recipient can delete it</div>
+                <div className="text-[15px] font-medium">{t("create.recipientDelete")}</div>
                 <Switch checked={allowRecipientDelete} onCheckedChange={setAllowRecipientDelete} />
               </div>
             </div>
@@ -631,7 +641,7 @@ export function CreatePage() {
 
         {error && (
           <Alert variant="destructive">
-            <AlertTitle>Could not create the link</AlertTitle>
+            <AlertTitle>{t("create.createError")}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -640,8 +650,11 @@ export function CreatePage() {
           <div className="space-y-2" role="status" aria-live="polite">
             <Progress value={progressPct(progress.done, progress.total)} />
             <p className="text-center text-xs text-muted-foreground">
-              Encrypting &amp; uploading: {humanSize(Math.max(0, progress.done))} /{" "}
-              {humanSize(progress.total)} ({progressPct(progress.done, progress.total)}%)
+              {t("create.progress", {
+                done: humanSize(Math.max(0, progress.done)),
+                total: humanSize(progress.total),
+                pct: `${progressPct(progress.done, progress.total)}%`,
+              })}
             </p>
           </div>
         )}
@@ -665,11 +678,11 @@ export function CreatePage() {
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
-          {busy ? (useS3 ? "Uploading…" : "Encrypting…") : "Create encrypted link"}
+          {busy ? (useS3 ? t("create.uploading") : t("create.encrypting")) : t("create.createLink")}
         </Button>
         {busy && useS3 && (
           <Button variant="secondary" onClick={() => abortRef.current?.abort()}>
-            Cancel
+            {t("create.cancel")}
           </Button>
         )}
       </CardContent>

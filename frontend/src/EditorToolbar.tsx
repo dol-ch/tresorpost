@@ -5,6 +5,7 @@ import type { MarkType, NodeType } from "prosemirror-model";
 import { wrapInList, liftListItem } from "prosemirror-schema-list";
 import type { Command, EditorState } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
+import { useT } from "./i18n";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -133,6 +134,7 @@ function Svg({ children }: { children: ReactNode }) {
 }
 
 export function EditorToolbar({ view }: { view: EditorView }) {
+  const t = useT();
   const { state } = view;
   const { schema } = state;
   const strong = schema.marks.strong;
@@ -156,7 +158,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
       run(view, toggleMark(link));
       return;
     }
-    const href = window.prompt("Link URL (https://…)");
+    const href = window.prompt(t("editor.linkPrompt"));
     if (!href) return;
     run(view, toggleMark(link, { href }));
   };
@@ -211,12 +213,12 @@ export function EditorToolbar({ view }: { view: EditorView }) {
 
   const groups: ToolbarItem[][] = [
     [
-      markBtn("bold", "Bold  (⌘/Ctrl+B)", strong, <Svg>{I.bold}</Svg>),
-      markBtn("italic", "Italic  (⌘/Ctrl+I)", em, <Svg>{I.italic}</Svg>),
-      markBtn("code", "Inline code", codeMark, <Svg>{I.code}</Svg>),
+      markBtn("bold", t("editor.bold"), strong, <Svg>{I.bold}</Svg>),
+      markBtn("italic", t("editor.italic"), em, <Svg>{I.italic}</Svg>),
+      markBtn("code", t("editor.code"), codeMark, <Svg>{I.code}</Svg>),
       {
         key: "link",
-        title: "Link",
+        title: t("editor.link"),
         content: <Svg>{I.link}</Svg>,
         active: markActive(state, link),
         enabled: true,
@@ -226,7 +228,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
     [
       {
         key: "h1",
-        title: "Heading 1",
+        title: t("editor.h1"),
         content: <span className="text-[10px] font-semibold">H1</span>,
         active: blockActive(state, heading, { level: 1 }),
         enabled: true,
@@ -234,7 +236,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
       },
       {
         key: "h2",
-        title: "Heading 2",
+        title: t("editor.h2"),
         content: <span className="text-[10px] font-semibold">H2</span>,
         active: blockActive(state, heading, { level: 2 }),
         enabled: true,
@@ -244,7 +246,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
     [
       {
         key: "bullet",
-        title: "Bullet list",
+        title: t("editor.bullet"),
         content: <Svg>{I.list}</Svg>,
         active: wrappedIn(state, bullet),
         enabled: canRun(view, wrapInList(bullet)) || wrappedIn(state, bullet) || wrappedIn(state, ordered),
@@ -252,7 +254,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
       },
       {
         key: "ordered",
-        title: "Numbered list",
+        title: t("editor.ordered"),
         content: <Svg>{I.listOrdered}</Svg>,
         active: wrappedIn(state, ordered),
         enabled: canRun(view, wrapInList(ordered)) || wrappedIn(state, ordered) || wrappedIn(state, bullet),
@@ -260,7 +262,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
       },
       {
         key: "quote",
-        title: "Quote",
+        title: t("editor.quote"),
         content: <Svg>{I.quote}</Svg>,
         active: wrappedIn(state, quote),
         enabled: canRun(view, wrapIn(quote)) || wrappedIn(state, quote),
@@ -268,7 +270,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
       },
       {
         key: "hr",
-        title: "Divider",
+        title: t("editor.hr"),
         content: <Svg>{I.rule}</Svg>,
         enabled: true,
         onRun: () => run(view, insertHr),
@@ -277,14 +279,14 @@ export function EditorToolbar({ view }: { view: EditorView }) {
     [
       {
         key: "undo",
-        title: "Undo  (⌘/Ctrl+Z)",
+        title: t("editor.undo"),
         content: <Svg>{I.undo}</Svg>,
         enabled: canRun(view, undo),
         onRun: () => run(view, undo),
       },
       {
         key: "redo",
-        title: "Redo  (⌘/Ctrl+Y)",
+        title: t("editor.redo"),
         content: <Svg>{I.redo}</Svg>,
         enabled: canRun(view, redo),
         onRun: () => run(view, redo),
@@ -296,7 +298,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
     <div
       className="flex items-center gap-0.5 overflow-x-auto border-t border-border bg-card px-2 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="toolbar"
-      aria-label="Formatting"
+      aria-label={t("editor.formatting")}
     >
       {groups.map((group, gi) => (
         <div className="flex items-center gap-0.5" key={gi}>

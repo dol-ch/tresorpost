@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n";
 
 /** Small uppercase field/section label used throughout the app. */
 export function Kicker({
@@ -79,9 +80,10 @@ export function SelfDestructCard({
   opensLine: string | null;
   expiry: { absolute: string; relative: string };
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-2.5 rounded-[14px] bg-muted p-4">
-      <Kicker>Self-destructs</Kicker>
+      <Kicker>{t("view.selfDestructs")}</Kicker>
       <div className="flex flex-col gap-1.5 text-[14.5px]">
         {opensLine && (
           <p className="flex items-center gap-2 font-medium text-primary">

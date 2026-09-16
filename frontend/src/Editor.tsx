@@ -32,8 +32,9 @@ export const RichTextEditor = forwardRef<
     autoFocus?: boolean;
     onEmptyChange?: (empty: boolean) => void;
     onBlurAway?: () => void;
+    placeholder?: string;
   }
->(({ autoFocus, onEmptyChange, onBlurAway }, ref) => {
+>(({ autoFocus, onEmptyChange, onBlurAway, placeholder }, ref) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -92,6 +93,7 @@ export const RichTextEditor = forwardRef<
       },
     });
     v.dom.classList.add("is-empty");
+    if (placeholder) v.dom.setAttribute("data-placeholder", placeholder);
     onEmptyChangeRef.current?.(true);
     viewRef.current = v;
     setView(v);
@@ -102,6 +104,11 @@ export const RichTextEditor = forwardRef<
       setView(null);
     };
   }, []);
+
+  useEffect(() => {
+    const el = viewRef.current?.dom;
+    if (el && placeholder) el.setAttribute("data-placeholder", placeholder);
+  }, [placeholder, view]);
 
   useImperativeHandle(ref, () => ({
     getHTML: () => {
