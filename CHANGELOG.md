@@ -11,6 +11,14 @@ compatibility promise.
 Add entries here as you go, under `Added` / `Changed` / `Fixed` /
 `Security`, then fold them into a dated release section when you cut one.
 
+## [0.1.30] — 2026-09-16
+
+### Changed
+
+- Footer shows the crate/npm version (`v0.1.30` from `package.json` /
+  `Cargo.toml`) instead of a git commit hash, which Docker builds never
+  received.
+
 ## [0.1.27] and earlier — 2026-09-14 to 2026-09-16
 
 The first two days of development. Summarized by theme rather than by the

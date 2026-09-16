@@ -256,23 +256,23 @@ export function App() {
                   {isGitHubHost(l.href) ? t("footer.source") : l.label}
                 </a>
               ))}
-              {__COMMIT_HASH__ && (
+              {__APP_VERSION__ && (
                 githubLink ? (
                   <a
-                    href={`${githubLink.href.replace(/\/+$/, "")}/commit/${__COMMIT_HASH__}`}
+                    href={`${githubLink.href.replace(/\/+$/, "")}/releases/tag/v${__APP_VERSION__}`}
                     target="_blank"
                     rel="noreferrer"
                     className="font-mono text-xs opacity-75 hover:opacity-100"
-                    title={`Commit ${__COMMIT_HASH__}`}
+                    title={`Tresorpost v${__APP_VERSION__}`}
                   >
-                    #{__COMMIT_HASH__}
+                    v{__APP_VERSION__}
                   </a>
                 ) : (
                   <span
                     className="font-mono text-xs opacity-75"
-                    title={`Commit ${__COMMIT_HASH__}`}
+                    title={`Tresorpost v${__APP_VERSION__}`}
                   >
-                    #{__COMMIT_HASH__}
+                    v{__APP_VERSION__}
                   </span>
                 )
               )}
