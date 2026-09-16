@@ -27,7 +27,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +35,14 @@ import { Progress } from "@/components/ui/progress";
 import { EmptyState, SelfDestructCard } from "@/components/kit";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 
 function progressPct(done: number, total: number) {
   if (!total) return 0;
@@ -114,8 +121,8 @@ function RenderedText({ html }: { html: string }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-end">
-        <Button variant="secondary" size="sm" type="button" onClick={copyAll}>
-          {copied ? "Copied!" : "Copy text"}
+        <Button variant="ghost" size="sm" type="button" onClick={copyAll}>
+          {copied ? "Copied" : "Copy"}
         </Button>
       </div>
       <div
@@ -343,82 +350,33 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
-        <DecryptedLocallyBadge />
+        <ViewChrome
+          reportEnabled={reportEnabled}
+          id={id}
+          keyB64Url={keyB64Url}
+          recipientDeleteToken={recipientDeleteToken}
+          kind={payload.kind}
+          onDestroyed={() => setStatus({ state: "destroyed" })}
+        />
         <SelfDestructCard opensLine={opensLine} expiry={expiry} />
-        {payload.kind === "text" && (
-          <>
-            <RenderedText html={payload.data} />
-            <ReportButton
-              enabled={reportEnabled}
-              id={id}
-              keyB64Url={keyB64Url}
-              recipientDeleteToken={recipientDeleteToken}
-              kind="text"
-              label="Report text"
-            />
-          </>
-        )}
+        {payload.kind === "text" && <RenderedText html={payload.data} />}
         {payload.kind === "image" && (
-          <>
-            <div className="space-y-2 text-center">
-              <img
-                alt={payload.filename ?? "image"}
-                className="mx-auto max-w-full rounded-lg"
-                src={URL.createObjectURL(base64ToBlob(payload.data, payload.mime ?? "image/*"))}
-              />
-              <p className="text-sm text-muted-foreground">{payload.filename}</p>
-            </div>
-            <ReportButton
-              enabled={reportEnabled}
-              id={id}
-              keyB64Url={keyB64Url}
-              recipientDeleteToken={recipientDeleteToken}
-              kind="image"
-              label="Report image"
+          <div className="space-y-2 text-center">
+            <img
+              alt={payload.filename ?? "image"}
+              className="mx-auto max-w-full rounded-lg"
+              src={URL.createObjectURL(base64ToBlob(payload.data, payload.mime ?? "image/*"))}
             />
-          </>
+            <p className="text-sm text-muted-foreground">{payload.filename}</p>
+          </div>
         )}
         {payload.kind === "video" && (
-          <>
-            <VideoPlayer
-              blob={base64ToBlob(payload.data, payload.mime ?? "video/mp4")}
-              filename={payload.filename}
-            />
-            <ReportButton
-              enabled={reportEnabled}
-              id={id}
-              keyB64Url={keyB64Url}
-              recipientDeleteToken={recipientDeleteToken}
-              kind="video"
-              label="Report video"
-            />
-          </>
+          <VideoPlayer
+            blob={base64ToBlob(payload.data, payload.mime ?? "video/mp4")}
+            filename={payload.filename}
+          />
         )}
-        {payload.kind === "file" && (
-          <>
-            <FileDownload payload={payload} />
-            <ReportButton
-              enabled={reportEnabled}
-              id={id}
-              keyB64Url={keyB64Url}
-              recipientDeleteToken={recipientDeleteToken}
-              kind="file"
-              label="Report file"
-            />
-          </>
-        )}
-        <div className="flex flex-col gap-2 pt-1">
-          {recipientDeleteToken && (
-            <RecipientDestroy
-              id={id}
-              token={recipientDeleteToken}
-              onDestroyed={() => setStatus({ state: "destroyed" })}
-            />
-          )}
-          <Button variant="secondary" asChild>
-            <a href="/">Create your own</a>
-          </Button>
-        </div>
+        {payload.kind === "file" && <FileDownload payload={payload} />}
       </CardContent>
     </Card>
   );
@@ -530,7 +488,14 @@ function S3FileView({
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
-        <DecryptedLocallyBadge />
+        <ViewChrome
+          reportEnabled={reportEnabled}
+          id={id}
+          keyB64Url={keyB64Url}
+          recipientDeleteToken={recipientDeleteToken}
+          kind={isVideo ? "video" : isImage ? "image" : "file"}
+          onDestroyed={onDestroyed}
+        />
         <SelfDestructCard opensLine={opensLine} expiry={expiry} />
 
         <div className="flex items-center gap-3.5 rounded-[14px] bg-muted p-4">
@@ -587,23 +552,6 @@ function S3FileView({
           </Button>
         )}
 
-        <ReportButton
-          enabled={reportEnabled}
-          id={id}
-          keyB64Url={keyB64Url}
-          recipientDeleteToken={recipientDeleteToken}
-          kind={isVideo ? "video" : isImage ? "image" : "file"}
-          label={isVideo ? "Report video" : isImage ? "Report image" : "Report file"}
-        />
-
-        <div className="flex flex-col gap-2 pt-1">
-          {recipientDeleteToken && (
-            <RecipientDestroy id={id} token={recipientDeleteToken} onDestroyed={onDestroyed} />
-          )}
-          <Button variant="secondary" asChild>
-            <a href="/">Create your own</a>
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
@@ -616,35 +564,104 @@ function reportViewUrl(id: string, keyB64Url: string, recipientDeleteToken?: str
   return `${window.location.origin}/#/v/${id}/${keyB64Url}${token}`;
 }
 
-function ReportButton({
-  enabled,
+function ViewChrome({
+  reportEnabled,
   id,
   keyB64Url,
   recipientDeleteToken,
   kind,
-  label,
+  onDestroyed,
 }: {
-  enabled: boolean;
+  reportEnabled: boolean;
   id: string;
   keyB64Url: string;
   recipientDeleteToken?: string;
   kind: string;
-  label: string;
+  onDestroyed: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [reported, setReported] = useState(false);
+  const canReport = reportEnabled && !reported;
+  const canDelete = Boolean(recipientDeleteToken);
+  const showMore = canReport || canDelete || reported;
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <DecryptedLocallyBadge />
+        {showMore && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" type="button" aria-label="More">
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {reportEnabled && (
+                <DropdownMenuItem
+                  disabled={reported}
+                  onSelect={() => {
+                    if (!reported) setReportOpen(true);
+                  }}
+                >
+                  {reported ? "Reported" : "Report"}
+                </DropdownMenuItem>
+              )}
+              {reportEnabled && canDelete && <DropdownMenuSeparator />}
+              {canDelete && (
+                <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+      {reportEnabled && (
+        <ReportDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          id={id}
+          keyB64Url={keyB64Url}
+          recipientDeleteToken={recipientDeleteToken}
+          kind={kind}
+          onSent={() => setReported(true)}
+        />
+      )}
+      {recipientDeleteToken && (
+        <DeleteDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          id={id}
+          token={recipientDeleteToken}
+          onDestroyed={onDestroyed}
+        />
+      )}
+    </>
+  );
+}
+
+function ReportDialog({
+  open,
+  onOpenChange,
+  id,
+  keyB64Url,
+  recipientDeleteToken,
+  kind,
+  onSent,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  id: string;
+  keyB64Url: string;
+  recipientDeleteToken?: string;
+  kind: string;
+  onSent: () => void;
+}) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
-
-  if (!enabled) return null;
-  if (sent) {
-    return (
-      <Button variant="secondary" type="button" disabled>
-        Reported
-      </Button>
-    );
-  }
 
   async function onConfirm(e: MouseEvent) {
     e.preventDefault();
@@ -657,8 +674,8 @@ function ReportButton({
         message: message.trim() || undefined,
         kind,
       });
-      setSent(true);
-      setOpen(false);
+      onSent();
+      onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -667,66 +684,59 @@ function ReportButton({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <AlertDialog
-        open={open}
-        onOpenChange={(next) => {
-          if (busy) return;
-          setOpen(next);
-          if (!next) setError(null);
-        }}
-      >
-        <AlertDialogTrigger asChild>
-          <Button variant="destructive" type="button">
-            {label}
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Report this content?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This sends the link — including the decryption key — to the site
-              administrators. They will be able to open and view the file or
-              note. Only report abuse you want them to see.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor={`report-message-${id}`}>Message (optional)</Label>
-            <Textarea
-              id={`report-message-${id}`}
-              value={message}
-              maxLength={MAX_REPORT_MESSAGE}
-              disabled={busy}
-              placeholder="Why are you reporting this?"
-              onChange={(e) => setMessage(e.target.value)}
-            />
-          </div>
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={busy}
-              onClick={onConfirm}
-            >
-              {busy ? "Sending…" : "Send to administrators"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (busy) return;
+        onOpenChange(next);
+        if (!next) setError(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Report this content?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This sends the link — including the decryption key — to the site
+            administrators. They will be able to open and view the file or
+            note. Only report abuse you want them to see.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`report-message-${id}`}>Message (optional)</Label>
+          <Textarea
+            id={`report-message-${id}`}
+            value={message}
+            maxLength={MAX_REPORT_MESSAGE}
+            disabled={busy}
+            placeholder="Why are you reporting this?"
+            onChange={(e) => setMessage(e.target.value)}
+          />
+        </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" disabled={busy} onClick={onConfirm}>
+            {busy ? "Sending…" : "Send to administrators"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
-function RecipientDestroy({
+function DeleteDialog({
+  open,
+  onOpenChange,
   id,
   token,
   onDestroyed,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   id: string;
   token: string;
   onDestroyed: () => void;
@@ -734,49 +744,52 @@ function RecipientDestroy({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onConfirm() {
+  async function onConfirm(e: MouseEvent) {
+    e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
       await deleteSecret(id, token);
       onDestroyed();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="secondary" className="text-destructive" disabled={busy}>
-            {busy ? "Deleting…" : "Delete permanently"}
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Permanently delete this?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Anyone else with the link will not be able to open it. This cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="text-destructive" onClick={onConfirm}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-    </div>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (busy) return;
+        onOpenChange(next);
+        if (!next) setError(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Permanently delete this?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Anyone else with the link will not be able to open it. This cannot
+            be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" disabled={busy} onClick={onConfirm}>
+            {busy ? "Deleting…" : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
