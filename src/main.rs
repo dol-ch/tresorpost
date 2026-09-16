@@ -209,6 +209,7 @@ async fn main() {
         .route("/admin/active", get(admin::admin_active))
         .route("/admin/purge", post(admin::admin_purge))
         .layer(DefaultBodyLimit::max(body_limit));
+    let api = no_store_layer(api);
 
     let mut app = Router::new().nest("/api", api);
 
