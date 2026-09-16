@@ -1,2 +1,22 @@
+/target
+*.db
+*.db-shm
+*.db-wal
+/db/*
+!/db/.gitkeep
+
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Private brand overlay (proprietary fonts/logos — never published)
+frontend/src/brand/private/
+
+.env
+.env.local
+
+.DS_Store
+*.log
+
 .idea
 /.idea
