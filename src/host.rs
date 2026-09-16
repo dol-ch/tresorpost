@@ -5,7 +5,7 @@
 
 use axum::{
     extract::Request,
-    http::{header, HeaderMap, Uri},
+    http::{HeaderMap, Uri, header},
     middleware::Next,
     response::{IntoResponse, Redirect, Response},
 };

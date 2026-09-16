@@ -6,10 +6,10 @@ use std::{
     time::Duration,
 };
 
-use axum::{http::StatusCode, Json};
+use axum::{Json, http::StatusCode};
 use sqlx::{
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
     Row, SqlitePool,
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
 };
 
 use crate::common::*;
@@ -115,14 +115,12 @@ pub(crate) async fn destroy_secret(
     s3: &Option<S3Backend>,
     id: &str,
 ) -> DestroyOutcome {
-    let row = sqlx::query(
-        "SELECT storage, status, s3_key, upload_id FROM secrets WHERE id = ?",
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await
-    .ok()
-    .flatten();
+    let row = sqlx::query("SELECT storage, status, s3_key, upload_id FROM secrets WHERE id = ?")
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
 
     let Some(row) = row else {
         return DestroyOutcome::Missing;
@@ -340,7 +338,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
         .execute(&pool)
         .await
         .ok();
-    
+
     sqlx::query("ALTER TABLE secrets ADD COLUMN kind TEXT")
         .execute(&pool)
         .await
@@ -349,7 +347,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
         .execute(&pool)
         .await
         .ok();
-    
+
     for stmt in [
         "ALTER TABLE secrets ADD COLUMN storage TEXT NOT NULL DEFAULT 'sqlite'",
         "ALTER TABLE secrets ADD COLUMN status TEXT NOT NULL DEFAULT 'ready'",
@@ -367,7 +365,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
         .execute(&pool)
         .await
         .ok();
-    
+
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS metrics (\
             name TEXT PRIMARY KEY,\
@@ -377,7 +375,7 @@ pub(crate) async fn init_db(db_path: &str) -> SqlitePool {
     .execute(&pool)
     .await
     .expect("failed to create metrics table");
-    
+
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS daily_stats (\
             day TEXT PRIMARY KEY,\
@@ -423,7 +421,10 @@ mod tests {
     #[test]
     fn pending_expires_caps_at_ttl() {
         let now = 1_000_000;
-        assert_eq!(pending_expires_at(now, 31 * 24 * 3600, 6 * 3600), now + 6 * 3600);
+        assert_eq!(
+            pending_expires_at(now, 31 * 24 * 3600, 6 * 3600),
+            now + 6 * 3600
+        );
         assert_eq!(pending_expires_at(now, 60, 6 * 3600), now + 60);
     }
 
@@ -470,7 +471,10 @@ mod tests {
         .unwrap();
 
         let n = purge_expired(&pool, &None, now, 6 * 3600).await;
-        assert_eq!(n, 1, "only the sqlite row should be dropped without an S3 backend");
+        assert_eq!(
+            n, 1,
+            "only the sqlite row should be dropped without an S3 backend"
+        );
 
         let left: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM secrets")
             .fetch_one(&pool)
