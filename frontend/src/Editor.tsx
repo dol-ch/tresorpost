@@ -131,9 +131,9 @@ export const RichTextEditor = forwardRef<
   }));
 
   return (
-    <div ref={wrapRef} className="overflow-hidden rounded-t-[14px]">
-      {view && <EditorToolbar view={view} />}
+    <div ref={wrapRef} className="overflow-hidden">
       <div className="editor-host" ref={hostRef} />
+      {view && <EditorToolbar view={view} />}
     </div>
   );
 });

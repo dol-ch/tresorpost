@@ -265,7 +265,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
 
   return (
     <div
-      className="flex items-center gap-0.5 overflow-x-auto border-b border-border bg-muted px-2 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex items-center gap-0.5 overflow-x-auto border-t border-border bg-muted px-2 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="toolbar"
       aria-label="Formatting"
     >
