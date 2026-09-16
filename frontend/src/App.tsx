@@ -19,6 +19,16 @@ type Route =
   | { name: "privacy" }
   | { name: "admin" };
 
+function isGitHubHost(href: string): boolean {
+  try {
+    const { hostname } = new URL(href);
+    const normalized = hostname.toLowerCase();
+    return normalized === "github.com" || normalized.endsWith(".github.com");
+  } catch {
+    return false;
+  }
+}
+
 function pathnameKey(): string {
   return window.location.pathname.replace(/\/+$/, "") || "/";
 }
@@ -242,7 +252,7 @@ export function App() {
               </a>
               {brand.footerLinks.map((l) => (
                 <a key={l.href} href={l.href} target="_blank" rel="noreferrer">
-                  {l.href.includes("github.com") ? t("footer.source") : l.label}
+                  {isGitHubHost(l.href) ? t("footer.source") : l.label}
                 </a>
               ))}
             </span>
