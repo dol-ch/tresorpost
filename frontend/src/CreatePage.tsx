@@ -523,7 +523,7 @@ export function CreatePage() {
               />
             </div>
           )}
-          <div className="flex items-center justify-between gap-3 border-t border-border px-3.5 py-2.5">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-border px-3.5 py-2.5">
             {file ? (
               <Button
                 type="button"
@@ -544,7 +544,7 @@ export function CreatePage() {
               >
                 <Paperclip className="size-4 shrink-0" strokeWidth={1.8} />
                 {t("create.attach")}
-                <span className="font-normal text-muted-foreground/75">{t("create.upTo", { cap: maxLabel })}</span>
+                <span className="truncate font-normal text-muted-foreground/75">{t("create.upTo", { cap: maxLabel })}</span>
               </button>
             )}
             <span className="truncate text-[12.5px] text-muted-foreground">
