@@ -8,20 +8,13 @@ import {
 } from "react";
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { Schema, DOMSerializer } from "prosemirror-model";
-import { schema as basicSchema } from "prosemirror-schema-basic";
-import { addListNodes } from "prosemirror-schema-list";
 import { exampleSetup } from "prosemirror-example-setup";
 import { EditorToolbar } from "./EditorToolbar";
 import { codeHighlightPlugin } from "./codeHighlight";
+import { editorSchema, docToHTML } from "./richText";
 
 import "prosemirror-view/style/prosemirror.css";
 import "./highlight.css";
-
-const editorSchema = new Schema({
-  nodes: addListNodes(basicSchema.spec.nodes, "paragraph block*", "block"),
-  marks: basicSchema.spec.marks,
-});
 
 export interface EditorHandle {
   getHTML: () => string;
@@ -114,11 +107,7 @@ export const RichTextEditor = forwardRef<
     getHTML: () => {
       const v = viewRef.current;
       if (!v) return "";
-      const serializer = DOMSerializer.fromSchema(editorSchema);
-      const fragment = serializer.serializeFragment(v.state.doc.content);
-      const div = document.createElement("div");
-      div.appendChild(fragment);
-      return div.innerHTML;
+      return docToHTML(v.state.doc);
     },
     isEmpty: () => {
       const v = viewRef.current;
@@ -131,7 +120,7 @@ export const RichTextEditor = forwardRef<
   }));
 
   return (
-    <div ref={wrapRef} className="overflow-hidden">
+    <div ref={wrapRef}>
       <div className="editor-host" ref={hostRef} />
       {view && <EditorToolbar view={view} />}
     </div>

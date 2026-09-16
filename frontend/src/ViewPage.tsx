@@ -4,6 +4,7 @@ import hljs from "highlight.js/lib/common";
 import { fetchSecret, deleteSecret, fetchConfig, sendContentReport } from "./api";
 import { decryptBytes, base64UrlToBytes, type StreamMeta, type StreamHeader } from "./crypto";
 import { decodePayload, base64ToBlob, type SecretPayload } from "./payload";
+import { displayHTML, RICH_TEXT_SANITIZE } from "./richText";
 import {
   parseMeta,
   readHeader,
@@ -128,7 +129,9 @@ function RenderedText({ html }: { html: string }) {
       <div
         className="rendered-text"
         ref={ref}
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+        dangerouslySetInnerHTML={{
+          __html: displayHTML(DOMPurify.sanitize(html, RICH_TEXT_SANITIZE)),
+        }}
       />
     </div>
   );
