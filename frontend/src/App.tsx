@@ -8,7 +8,8 @@ import { PrivacyPage } from "./PrivacyPage";
 import { brand } from "./brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { applySeo, SITE_DESCRIPTION } from "./seo";
+import { applySeo } from "./seo";
+import { useI18n } from "./i18n";
 
 type Route =
   | { name: "create" }
@@ -106,6 +107,7 @@ function NavLink({
 export function App() {
   const [route, setRoute] = useState<Route>(parseRoute);
   const [composeKey, setComposeKey] = useState(0);
+  const { t, locale } = useI18n();
 
   function goHome(event: MouseEvent<HTMLAnchorElement>) {
     if (
@@ -140,37 +142,39 @@ export function App() {
     const name = brand.name;
     if (route.name === "faq") {
       applySeo({
-        title: `How it works — ${name}`,
-        description:
-          "How Tresorpost encrypts secrets in the browser, keeps the key in the link, and deletes ciphertext after reading. Hosted in Switzerland, no analytics.",
+        title: t("seo.faqTitle").replace("Tresorpost", name),
+        description: t("seo.faqDesc"),
         path: "/faq",
+        locale,
       });
       return;
     }
     if (route.name === "privacy") {
       applySeo({
-        title: `Privacy — ${name}`,
-        description:
-          "Tresorpost stores only ciphertext. No keys, no accounts, no analytics. App and object storage run in Zurich, Switzerland.",
+        title: t("seo.privacyTitle").replace("Tresorpost", name),
+        description: t("seo.privacyDesc"),
         path: "/privacy",
+        locale,
       });
       return;
     }
     if (route.name === "view" || route.name === "delete" || route.name === "admin") {
       applySeo({
-        title: `${name} — encrypted transfer`,
-        description: SITE_DESCRIPTION,
+        title: t("seo.noindexTitle").replace("Tresorpost", name),
+        description: t("seo.homeDesc"),
         path: "/",
         noindex: true,
+        locale,
       });
       return;
     }
     applySeo({
-      title: `${name} — quantum-safe file transfer that forgets itself`,
-      description: SITE_DESCRIPTION,
+      title: t("seo.homeTitle").replace("Tresorpost", name),
+      description: t("seo.homeDesc"),
       path: "/",
+      locale,
     });
-  }, [route]);
+  }, [route, t, locale]);
 
   const Wordmark = brand.Wordmark;
   const sendActive = route.name === "create" || route.name === "view" || route.name === "delete";
@@ -178,7 +182,7 @@ export function App() {
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <div className="mx-auto w-full max-w-[720px] px-5 pt-7 pb-18 sm:px-5">
-        <nav className="mb-7 flex flex-nowrap items-center gap-1" aria-label="Primary">
+        <nav className="mb-7 flex flex-nowrap items-center gap-1" aria-label={t("nav.primary")}>
           <a
             className="mr-auto inline-flex min-w-0 shrink items-center gap-2 whitespace-nowrap"
             href="/"
@@ -188,13 +192,13 @@ export function App() {
             <Wordmark />
           </a>
           <NavLink href="/" active={sendActive} onClick={goHome}>
-            Send
+            {t("nav.send")}
           </NavLink>
           <NavLink href="/faq" active={route.name === "faq"}>
-            How it works
+            {t("nav.how")}
           </NavLink>
           <NavLink href="/privacy" active={route.name === "privacy"}>
-            Privacy
+            {t("nav.privacy")}
           </NavLink>
           <ThemeToggle />
         </nav>
@@ -204,11 +208,10 @@ export function App() {
             <>
               <section className="mb-7">
                 <h1 className="mb-3.5 font-heading text-[clamp(27px,7.6vw,40px)] leading-[1.1] font-extrabold tracking-tight text-balance">
-                  Send a secret. It reads once, then it’s gone.
+                  {t("hero.title")}
                 </h1>
                 <p className="mb-7 max-w-[48ch] text-[17px] leading-snug text-muted-foreground text-pretty">
-                  Encrypted on your device. The key stays in the link — never on
-                  the server.
+                  {t("hero.lead")}
                 </p>
               </section>
               <CreatePage key={composeKey} />
@@ -229,24 +232,24 @@ export function App() {
 
         <footer className="mt-9 border-t border-border pt-5">
           <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted-foreground">
-            <span>No analytics · hosted in Switzerland</span>
+            <span>{t("footer.hosted")}</span>
             <span className="flex flex-wrap items-center gap-3">
               <a href="/faq" onClick={(event) => onInternalClick(event, "/faq")}>
-                How it works
+                {t("nav.how")}
               </a>
               <a href="/privacy" onClick={(event) => onInternalClick(event, "/privacy")}>
-                Privacy
+                {t("nav.privacy")}
               </a>
               {brand.footerLinks.map((l) => (
                 <a key={l.href} href={l.href} target="_blank" rel="noreferrer">
-                  {l.label}
+                  {l.href.includes("github.com") ? t("footer.source") : l.label}
                 </a>
               ))}
             </span>
           </div>
           {brand.footerCredit && (
             <div className="mt-2.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
-              <span>{brand.footerCredit.text}</span>
+              <span>{t("footer.madeIn")}</span>
               {brand.footerCredit.flag && <brand.footerCredit.flag />}
               <a href={brand.footerCredit.linkHref} target="_blank" rel="noreferrer">
                 {brand.footerCredit.linkLabel}

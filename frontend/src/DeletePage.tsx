@@ -4,8 +4,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/kit";
+import { useT } from "./i18n";
 
 export function DeletePage({ id, token }: { id: string; token: string }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,9 +36,9 @@ export function DeletePage({ id, token }: { id: string; token: string }) {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             }
-            title="Note destroyed"
-            description="Ciphertext has been removed from the server. Anyone with the share link will see that it is no longer available."
-            cta={{ label: "Create another", href: "#/" }}
+            title={t("delete.destroyedTitle")}
+            description={t("delete.destroyedBody")}
+            cta={{ label: t("share.another"), href: "#/" }}
           />
         </CardContent>
       </Card>
@@ -48,11 +50,10 @@ export function DeletePage({ id, token }: { id: string; token: string }) {
       <CardContent className="flex flex-col gap-4">
         <div>
           <h2 className="mb-1.5 font-heading text-xl font-bold tracking-tight">
-            Destroy this note now?
+            {t("delete.title")}
           </h2>
           <p className="text-[14.5px] text-muted-foreground">
-            This cannot be undone. Recipients will no longer be able to open the
-            share link.
+            {t("delete.body")}
           </p>
         </div>
         {error && (
@@ -61,10 +62,10 @@ export function DeletePage({ id, token }: { id: string; token: string }) {
           </Alert>
         )}
         <Button variant="secondary" className="text-destructive" onClick={onConfirm} disabled={busy}>
-          {busy ? "Deleting…" : "Yes, delete it"}
+          {busy ? t("view.deleting") : t("delete.yes")}
         </Button>
         <Button variant="secondary" asChild>
-          <a href="/">Cancel</a>
+          <a href="/">{t("delete.cancel")}</a>
         </Button>
       </CardContent>
     </Card>

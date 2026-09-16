@@ -2,6 +2,7 @@ import { Moon, Sun } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n";
 
 export type Theme = "light" | "dark";
 
@@ -20,6 +21,7 @@ export function applyTheme(theme: Theme) {
 }
 
 export function ThemeToggle() {
+  const t = useT();
   const [theme, setTheme] = useState<Theme>(currentTheme);
   const next: Theme = theme === "light" ? "dark" : "light";
   return (
@@ -27,8 +29,8 @@ export function ThemeToggle() {
       type="button"
       variant="outline"
       size="icon-sm"
-      title={`Switch to ${next} theme`}
-      aria-label="Toggle theme"
+      title={next === "dark" ? t("theme.toDark") : t("theme.toLight")}
+      aria-label={t("theme.toggle")}
       onClick={() => {
         applyTheme(next);
         setTheme(next);

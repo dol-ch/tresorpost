@@ -9,6 +9,7 @@ type SeoInput = {
   description: string;
   path: string;
   noindex?: boolean;
+  locale?: string;
 };
 
 function abs(path: string): string {
@@ -38,7 +39,13 @@ function linkRel(rel: string, href: string) {
   el.setAttribute("href", href);
 }
 
-export function applySeo({ title, description, path, noindex }: SeoInput) {
+const OG_LOCALE: Record<string, string> = {
+  de: "de_CH",
+  en: "en_GB",
+  uk: "uk_UA",
+};
+
+export function applySeo({ title, description, path, noindex, locale }: SeoInput) {
   document.title = title;
   meta("description", description);
   meta("robots", noindex ? "noindex, nofollow" : "index, follow");
@@ -47,6 +54,7 @@ export function applySeo({ title, description, path, noindex }: SeoInput) {
   meta("og:title", title, "property");
   meta("og:description", description, "property");
   meta("og:url", url, "property");
+  meta("og:locale", OG_LOCALE[locale ?? "de"] ?? "de_CH", "property");
   meta("twitter:title", title);
   meta("twitter:description", description);
   meta("twitter:image", `${SITE_ORIGIN}/og.png`);

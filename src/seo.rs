@@ -57,14 +57,14 @@ where
 
 const SITE: &str = "https://tresorpost.ch";
 
-const HOME_TITLE: &str = "Tresorpost — quantum-safe file transfer that forgets itself";
-const HOME_DESCRIPTION: &str = "Quantum-safe, end-to-end encrypted transfer for text, images, video and files. 256-bit encryption in your browser, hosted in Switzerland, no accounts and no analytics.";
+const HOME_TITLE: &str = "Tresorpost — quantensichere Dateiübertragung, die sich selbst vergisst";
+const HOME_DESCRIPTION: &str = "Quantensichere, Ende-zu-Ende-verschlüsselte Übertragung für Text, Bilder, Video und Dateien. 256-Bit-Verschlüsselung im Browser, gehostet in der Schweiz, ohne Konten und ohne Tracking.";
 
-const FAQ_TITLE: &str = "How it works — Tresorpost";
-const FAQ_DESCRIPTION: &str = "How Tresorpost encrypts secrets in the browser, keeps the key in the link, and deletes ciphertext after reading. Hosted in Switzerland, no analytics.";
+const FAQ_TITLE: &str = "So funktioniert’s — Tresorpost";
+const FAQ_DESCRIPTION: &str = "Wie Tresorpost Geheimnisse im Browser verschlüsselt, den Schlüssel im Link behält und den Ciphertext nach dem Lesen löscht. Gehostet in der Schweiz, kein Tracking.";
 
-const PRIVACY_TITLE: &str = "Privacy — Tresorpost";
-const PRIVACY_DESCRIPTION: &str = "Tresorpost stores only ciphertext. No keys, no accounts, no analytics. App and object storage run in Zurich, Switzerland.";
+const PRIVACY_TITLE: &str = "Datenschutz — Tresorpost";
+const PRIVACY_DESCRIPTION: &str = "Tresorpost speichert nur Ciphertext. Keine Schlüssel, keine Konten, kein Tracking. App und Object Storage in Zürich, Schweiz.";
 
 const INDEX_FOLLOW: &str = "index, follow";
 const NOINDEX: &str = "noindex, nofollow";
@@ -92,7 +92,7 @@ pub fn page_for(request_path: &str) -> PageMeta {
         },
         "/admin" => PageMeta {
             path: "/admin",
-            title: "Tresorpost — encrypted transfer",
+            title: "Tresorpost — verschlüsselte Übertragung",
             description: HOME_DESCRIPTION,
             robots: NOINDEX,
         },
@@ -186,10 +186,14 @@ fn replace_canonical(html: &str, href: &str) -> String {
 }
 
 fn replace_hreflang(html: &str, href: &str) -> String {
-    let Some(idx) = html.find("hreflang=\"en\"") else {
-        return html.to_string();
-    };
-    replace_href_attr_after(html, idx, href)
+    let mut out = html.to_string();
+    for lang in ["de", "en", "uk", "x-default"] {
+        let needle = format!("hreflang=\"{lang}\"");
+        if let Some(idx) = out.find(&needle) {
+            out = replace_href_attr_after(&out, idx, href);
+        }
+    }
+    out
 }
 
 fn replace_content_attr_after(html: &str, from: usize, value: &str) -> String {
@@ -280,17 +284,17 @@ struct FaqItem {
 
 const FAQ_NOSCRIPT: &str = r#"
   <main>
-    <h1>How Tresorpost works</h1>
-    <p>End-to-end encrypted, self-destructing transfer. The key stays in the link. Hosted in Switzerland, no analytics.</p>
-    <p><a href="/">Send a secret</a> · <a href="/privacy">Privacy</a></p>
+    <h1>So funktioniert Tresorpost</h1>
+    <p>Ende-zu-Ende verschlüsselt, selbstzerstörend. Der Schlüssel bleibt im Link. Gehostet in der Schweiz, kein Tracking.</p>
+    <p><a href="/">Geheimnis senden</a> · <a href="/privacy">Datenschutz</a></p>
   </main>
 "#;
 
 const PRIVACY_NOSCRIPT: &str = r#"
   <main>
-    <h1>Privacy — Tresorpost</h1>
-    <p>The server holds ciphertext it cannot read, and forgets it on schedule. Swiss storage in Zurich, no analytics, no accounts.</p>
-    <p><a href="/">Send a secret</a> · <a href="/faq">How it works</a></p>
+    <h1>Datenschutz — Tresorpost</h1>
+    <p>Der Server hält Ciphertext, den er nicht lesen kann, und vergisst ihn planmässig. Speicher in Zürich, kein Tracking, keine Konten.</p>
+    <p><a href="/">Geheimnis senden</a> · <a href="/faq">So funktioniert’s</a></p>
   </main>
 "#;
 
@@ -299,13 +303,16 @@ mod tests {
     use super::*;
 
     const FIXTURE: &str = r#"<!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
   <title>Tresorpost — encrypted self-destructing file transfer</title>
   <meta name="description" content="Home description" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://tresorpost.ch/" />
+  <link rel="alternate" hreflang="de" href="https://tresorpost.ch/" />
   <link rel="alternate" hreflang="en" href="https://tresorpost.ch/" />
+  <link rel="alternate" hreflang="uk" href="https://tresorpost.ch/" />
+  <link rel="alternate" hreflang="x-default" href="https://tresorpost.ch/" />
   <meta property="og:url" content="https://tresorpost.ch/" />
   <meta property="og:title" content="Home title" />
   <meta property="og:description" content="Home og" />
@@ -320,19 +327,19 @@ mod tests {
     #[test]
     fn faq_gets_own_canonical_and_title() {
         let out = rewrite_index_html(FIXTURE, "/faq");
-        assert!(out.contains("<title>How it works — Tresorpost</title>"));
+        assert!(out.contains("<title>So funktioniert’s — Tresorpost</title>"));
         assert!(out.contains("href=\"https://tresorpost.ch/faq\""));
         assert!(out.contains("content=\"https://tresorpost.ch/faq\""));
         assert!(out.contains("id=\"tresorpost-faq-jsonld\""));
         assert!(out.contains("FAQPage"));
-        assert!(out.contains("How Tresorpost works"));
+        assert!(out.contains("So funktioniert Tresorpost"));
         assert!(!out.contains("<title>Tresorpost — encrypted self-destructing file transfer</title>"));
     }
 
     #[test]
     fn privacy_is_indexable() {
         let out = rewrite_index_html(FIXTURE, "/privacy/");
-        assert!(out.contains("Privacy — Tresorpost"));
+        assert!(out.contains("Datenschutz — Tresorpost"));
         assert!(out.contains("https://tresorpost.ch/privacy"));
         assert!(out.contains("index, follow"));
     }
@@ -349,7 +356,7 @@ mod tests {
     fn faq_json_matches_frontend_copy() {
         assert_eq!(
             include_str!("seo_faqs.json"),
-            include_str!("../frontend/src/content/faqs.json")
+            include_str!("../frontend/src/content/faqs.de.json")
         );
     }
 
@@ -357,12 +364,12 @@ mod tests {
     fn rewrites_committed_index_html() {
         let html = include_str!("../frontend/index.html");
         let faq = rewrite_index_html(html, "/faq");
-        assert!(faq.contains("<title>How it works — Tresorpost</title>"));
+        assert!(faq.contains("<title>So funktioniert’s — Tresorpost</title>"));
         assert!(faq.contains("rel=\"canonical\" href=\"https://tresorpost.ch/faq\""));
         assert!(faq.contains("FAQPage"));
         assert!(faq.contains("og.png"));
         let home = rewrite_index_html(html, "/");
-        assert!(home.contains("quantum-safe file transfer that forgets itself"));
+        assert!(home.contains("quantensichere Dateiübertragung, die sich selbst vergisst"));
         assert!(!home.contains("id=\"tresorpost-faq-jsonld\""));
     }
 }

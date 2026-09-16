@@ -159,7 +159,7 @@
   @apply min-h-[140px] p-3.5 text-[15px] leading-relaxed outline-none;
 }
 .editor-host .ProseMirror.is-empty::before {
-  content: "Write a message, or drop a file here…";
+  content: attr(data-placeholder);
   @apply pointer-events-none float-left h-0 text-[15px] text-muted-foreground;
 }
 .editor-host .ProseMirror p {

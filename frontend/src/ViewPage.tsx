@@ -44,6 +44,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import { useI18n, useT } from "./i18n";
 
 function progressPct(done: number, total: number) {
   if (!total) return 0;
@@ -60,15 +61,19 @@ function LockIcon() {
 }
 
 function DecryptedLocallyBadge() {
+  const t = useT();
   return (
     <Badge variant="outline" className="w-fit">
       <LockIcon />
-      Decrypted locally
+      {t("view.badge")}
     </Badge>
   );
 }
 
 function RenderedText({ html }: { html: string }) {
+  const t = useT();
+  const copyLabel = t("copy.code");
+  const copiedLabel = t("copy.copied");
   const ref = useRef<HTMLDivElement>(null);
   const fullText = useRef<string>("");
   const [copied, setCopied] = useState(false);
@@ -90,14 +95,14 @@ function RenderedText({ html }: { html: string }) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "code-copy";
-      btn.textContent = "Copy";
+      btn.textContent = copyLabel;
       const onClick = async (e: Event) => {
         e.preventDefault();
         const code = pre.querySelector("code")?.textContent ?? pre.textContent ?? "";
         if (await copyText(code)) {
-          btn.textContent = "Copied!";
+          btn.textContent = copiedLabel;
           window.setTimeout(() => {
-            btn.textContent = "Copy";
+            btn.textContent = copyLabel;
           }, 1200);
         }
       };
@@ -109,7 +114,7 @@ function RenderedText({ html }: { html: string }) {
       });
     });
     return () => cleanups.forEach((c) => c());
-  }, [html]);
+  }, [html, copyLabel, copiedLabel]);
 
   async function copyAll() {
     const text = fullText.current || ref.current?.innerText || "";
@@ -123,7 +128,7 @@ function RenderedText({ html }: { html: string }) {
     <div className="flex flex-col gap-2">
       <div className="flex justify-end">
         <Button variant="ghost" size="sm" type="button" onClick={copyAll}>
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("copy.copied") : t("copy.code")}
         </Button>
       </div>
       <div
@@ -164,8 +169,8 @@ type Status =
       expiresAt: number;
     };
 
-function relativeTime(diffSec: number): string {
-  const rtf = new Intl.RelativeTimeFormat(undefined, {
+function relativeTime(diffSec: number, locale: string): string {
+  const rtf = new Intl.RelativeTimeFormat(locale, {
     numeric: "auto",
     style: "long",
   });
@@ -183,16 +188,18 @@ function relativeTime(diffSec: number): string {
   return "";
 }
 
-function formatExpiry(sec: number): { absolute: string; relative: string } {
+function formatExpiry(sec: number, locale: string): { absolute: string; relative: string } {
   const d = new Date(sec * 1000);
-  const absolute = new Intl.DateTimeFormat(undefined, {
+  const absolute = new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(d);
-  return { absolute, relative: relativeTime(sec - Date.now() / 1000) };
+  return { absolute, relative: relativeTime(sec - Date.now() / 1000, locale) };
 }
 
 export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
+  const t = useT();
+  const { intlLocale } = useI18n();
   const [status, setStatus] = useState<Status>({ state: "loading" });
   const [reportEnabled, setReportEnabled] = useState(false);
   const started = useRef(false);
@@ -232,7 +239,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
           } catch {
             setStatus({
               state: "error",
-              message: "Decryption failed. The link may be corrupted or the key is wrong.",
+            message: t("view.decryptFailed"),
             });
           }
           return;
@@ -243,7 +250,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
         } catch {
           setStatus({
             state: "error",
-            message: "Decryption failed. The link may be corrupted or the key is wrong.",
+            message: t("view.decryptFailed"),
           });
           return;
         }
@@ -267,7 +274,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
     return (
       <Card>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Decrypting…</p>
+          <p className="text-sm text-muted-foreground">{t("view.decrypting")}</p>
         </CardContent>
       </Card>
     );
@@ -283,9 +290,9 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
                 <path d="M7 11V7a5 5 0 0 1 9.9-1" />
               </svg>
             }
-            title="Nothing here"
-            description="It was opened, deleted, or it expired. Encrypted notes are removed from the server for good — there is no copy and no way to recover it."
-            cta={{ label: "Create your own note", href: "#/" }}
+            title={t("view.nothingTitle")}
+            description={t("view.nothingBody")}
+            cta={{ label: t("view.createOwn"), href: "#/" }}
           />
         </CardContent>
       </Card>
@@ -302,9 +309,9 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             }
-            title="Note destroyed"
-            description="The ciphertext has been wiped from the server. Anyone opening the link from now on will see nothing."
-            cta={{ label: "Create another note", href: "#/" }}
+            title={t("view.destroyedTitle")}
+            description={t("view.destroyedBody")}
+            cta={{ label: t("view.createAnother"), href: "#/" }}
           />
         </CardContent>
       </Card>
@@ -314,13 +321,13 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
     return (
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="font-heading text-xl font-bold tracking-tight">Could not open</h2>
+          <h2 className="font-heading text-xl font-bold tracking-tight">{t("view.couldNotOpen")}</h2>
           <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>{t("view.error")}</AlertTitle>
             <AlertDescription>{status.message}</AlertDescription>
           </Alert>
           <Button variant="secondary" asChild>
-            <a href="/">Go home</a>
+            <a href="/">{t("view.goHome")}</a>
           </Button>
         </CardContent>
       </Card>
@@ -341,13 +348,15 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
 
   const { payload, viewsRemaining, expiresAt } = status;
   const opensLimited = viewsRemaining !== null;
-  const expiry = formatExpiry(expiresAt);
+  const expiry = formatExpiry(expiresAt, intlLocale);
   let opensLine: string | null = null;
   if (opensLimited) {
     opensLine =
       viewsRemaining === 0
-        ? "No more opens — destroyed after this view"
-        : `${viewsRemaining} more open${viewsRemaining === 1 ? "" : "s"}`;
+        ? t("view.goneOpens")
+        : viewsRemaining === 1
+          ? t("view.moreOpens1")
+          : t("view.moreOpensN", { n: viewsRemaining });
   }
 
   return (
@@ -402,13 +411,15 @@ function S3FileView({
   reportEnabled: boolean;
   onDestroyed: () => void;
 }) {
+  const t = useT();
+  const { intlLocale } = useI18n();
   const { url, meta, key, header, viewsRemaining, expiresAt } = status;
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [phase, setPhase] = useState<"idle" | "downloading" | "done" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [playBlob, setPlayBlob] = useState<Blob | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const expiry = formatExpiry(expiresAt);
+  const expiry = formatExpiry(expiresAt, intlLocale);
   const isVideo =
     header.kind === "video" || (header.mime || "").startsWith("video/");
   const isImage =
@@ -420,8 +431,10 @@ function S3FileView({
   if (opensLimited) {
     opensLine =
       viewsRemaining === 0
-        ? "No more opens — destroyed after this view"
-        : `${viewsRemaining} more open${viewsRemaining === 1 ? "" : "s"}`;
+        ? t("view.goneOpens")
+        : viewsRemaining === 1
+          ? t("view.moreOpens1")
+          : t("view.moreOpensN", { n: viewsRemaining });
   }
 
   async function onDownload() {
@@ -430,7 +443,7 @@ function S3FileView({
     if (!useFsa && header.size > FALLBACK_MAX_BYTES) {
       setPhase("error");
       setMessage(
-        `This browser cannot stream ${humanSize(header.size)} to disk. Open the link in Chrome or Edge (which support streaming saves) to download files this large.`,
+        t("view.streamFail", { size: humanSize(header.size) }),
       );
       return;
     }
@@ -451,7 +464,7 @@ function S3FileView({
     if (header.size > FALLBACK_MAX_BYTES) {
       setPhase("error");
       setMessage(
-        `This file is ${humanSize(header.size)} — too large to open in the browser. Download it instead.`,
+        t("view.tooLargeOpen", { size: humanSize(header.size) }),
       );
       return;
     }
@@ -510,10 +523,10 @@ function S3FileView({
           </div>
           <div className="min-w-0">
             <div className="truncate text-[15.5px] font-semibold">
-              {header.filename || "download"}
+              {header.filename || t("view.download")}
             </div>
             <div className="mt-0.5 text-[13px] text-muted-foreground">
-              {humanSize(header.size)} · decrypted in your browser
+              {humanSize(header.size)} · {t("view.decryptedInBrowser")}
             </div>
           </div>
         </div>
@@ -526,9 +539,9 @@ function S3FileView({
             <p className="text-center text-xs text-muted-foreground">
               {phase === "done"
                 ? playBlob
-                  ? "Ready to play"
-                  : "Downloaded"
-                : "Decrypting & downloading"}
+                  ? t("view.readyPlay")
+                  : t("view.downloaded")
+                : t("view.decryptingDl")}
               : {humanSize(Math.max(0, progress.done))} / {humanSize(progress.total)} (
               {progressPct(progress.done, progress.total)}%)
             </p>
@@ -542,16 +555,16 @@ function S3FileView({
         {phase !== "downloading" && !playBlob && (
           <div className="flex flex-col gap-2">
             {canPreviewInBrowser && (
-              <Button onClick={onPlay}>{isImage ? "Decrypt & view" : "Decrypt & play"}</Button>
+              <Button onClick={onPlay}>{isImage ? t("view.decryptView") : t("view.decryptPlay")}</Button>
             )}
             <Button variant="secondary" onClick={onDownload}>
-              {isVideo ? "Download video" : isImage ? "Download image" : "Decrypt & download"}
+              {isVideo ? t("view.downloadVideo") : isImage ? t("view.downloadImage") : t("view.decryptDownload")}
             </Button>
           </div>
         )}
         {phase === "downloading" && (
           <Button variant="secondary" onClick={() => abortRef.current?.abort()}>
-            Cancel
+            {t("create.cancel")}
           </Button>
         )}
 
@@ -582,6 +595,7 @@ function ViewChrome({
   kind: string;
   onDestroyed: () => void;
 }) {
+  const t = useT();
   const [reportOpen, setReportOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [reported, setReported] = useState(false);
@@ -596,7 +610,7 @@ function ViewChrome({
         {showMore && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" type="button" aria-label="More">
+              <Button variant="ghost" size="icon-sm" type="button" aria-label={t("view.more")}>
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
@@ -608,13 +622,13 @@ function ViewChrome({
                     if (!reported) setReportOpen(true);
                   }}
                 >
-                  {reported ? "Reported" : "Report"}
+                  {reported ? t("view.reported") : t("view.report")}
                 </DropdownMenuItem>
               )}
               {reportEnabled && canDelete && <DropdownMenuSeparator />}
               {canDelete && (
                 <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
-                  Delete
+                  {t("share.delete")}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -662,6 +676,7 @@ function ReportDialog({
   kind: string;
   onSent: () => void;
 }) {
+  const t = useT();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -697,21 +712,19 @@ function ReportDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Report this content?</AlertDialogTitle>
+          <AlertDialogTitle>{t("view.reportTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            This sends the link — including the decryption key — to the site
-            administrators. They will be able to open and view the file or
-            note. Only report abuse you want them to see.
+            {t("view.reportBody")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`report-message-${id}`}>Message (optional)</Label>
+          <Label htmlFor={`report-message-${id}`}>{t("view.reportMsg")}</Label>
           <Textarea
             id={`report-message-${id}`}
             value={message}
             maxLength={MAX_REPORT_MESSAGE}
             disabled={busy}
-            placeholder="Why are you reporting this?"
+            placeholder={t("view.reportWhy")}
             onChange={(e) => setMessage(e.target.value)}
           />
         </div>
@@ -721,9 +734,9 @@ function ReportDialog({
           </Alert>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t("create.cancel")}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" disabled={busy} onClick={onConfirm}>
-            {busy ? "Sending…" : "Send to administrators"}
+            {busy ? t("share.sending") : t("view.sendAdmins")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -744,6 +757,7 @@ function DeleteDialog({
   token: string;
   onDestroyed: () => void;
 }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -774,11 +788,8 @@ function DeleteDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Permanently delete this?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Anyone else with the link will not be able to open it. This cannot
-            be undone.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("view.deleteForever")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("view.deleteForeverBody")}</AlertDialogDescription>
         </AlertDialogHeader>
         {error && (
           <Alert variant="destructive">
@@ -786,9 +797,9 @@ function DeleteDialog({
           </Alert>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t("create.cancel")}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" disabled={busy} onClick={onConfirm}>
-            {busy ? "Deleting…" : "Delete"}
+            {busy ? t("view.deleting") : t("share.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -797,14 +808,15 @@ function DeleteDialog({
 }
 
 function ImagePreview({ blob, filename }: { blob: Blob; filename?: string }) {
+  const t = useT();
   const url = useMemo(() => URL.createObjectURL(blob), [blob]);
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   return (
     <div className="flex flex-col items-center gap-3">
-      <img alt={filename ?? "image"} className="max-w-full rounded-[14px]" src={url} />
+      <img alt={filename ?? t("create.kindImage")} className="max-w-full rounded-[14px]" src={url} />
       <Button asChild>
         <a href={url} download={filename ?? "image"}>
-          Download image
+          {t("view.downloadImage")}
         </a>
       </Button>
     </div>
@@ -812,6 +824,7 @@ function ImagePreview({ blob, filename }: { blob: Blob; filename?: string }) {
 }
 
 function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
+  const t = useT();
   const url = useMemo(() => URL.createObjectURL(blob), [blob]);
   const [failed, setFailed] = useState(false);
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
@@ -828,13 +841,12 @@ function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
         />
       ) : (
         <p className="max-w-prose text-center text-sm text-muted-foreground">
-          This browser cannot decode this video (common for AVI and some MOV).
-          Download the file and open it in a player.
+          {t("view.videoFail")}
         </p>
       )}
       <Button asChild>
         <a href={url} download={filename ?? "video"}>
-          Download video
+          {t("view.downloadVideo")}
         </a>
       </Button>
     </div>
@@ -842,6 +854,7 @@ function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
 }
 
 function FileDownload({ payload }: { payload: SecretPayload }) {
+  const t = useT();
   const blob = base64ToBlob(payload.data, payload.mime ?? "application/octet-stream");
   const url = URL.createObjectURL(blob);
   return (
@@ -854,13 +867,13 @@ function FileDownload({ payload }: { payload: SecretPayload }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15.5px] font-semibold">
-          {payload.filename ?? "download"}
+          {payload.filename ?? t("view.download")}
         </div>
         <div className="mt-0.5 text-[13px] text-muted-foreground">{humanSize(blob.size)}</div>
       </div>
       <Button asChild>
         <a href={url} download={payload.filename ?? "download"}>
-          Download
+          {t("view.download")}
         </a>
       </Button>
     </div>
