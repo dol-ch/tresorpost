@@ -29,6 +29,8 @@ pub(crate) struct ConfigResp {
     max_s3_file_bytes: i64,
     /// When true, the create-success screen may email the share link via SMTP.
     email_enabled: bool,
+    /// When true, view pages may send an abuse report to `ADMIN_REPORT_URL`.
+    report_enabled: bool,
     /// When set, the UI mints share/delete URLs on this origin (`https://SHORT_DOMAIN`).
     #[serde(skip_serializing_if = "Option::is_none")]
     short_origin: Option<String>,
@@ -40,6 +42,7 @@ pub(crate) async fn config(State(state): State<AppState>) -> Json<ConfigResp> {
         s3_enabled: state.s3.is_some(),
         max_s3_file_bytes: state.s3.as_ref().map(|s| s.max_file_bytes).unwrap_or(0),
         email_enabled: state.mailer.is_some(),
+        report_enabled: state.mailer.is_some() && state.admin_report_to.is_some(),
         short_origin: crate::host::share_origin(),
     })
 }

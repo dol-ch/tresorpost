@@ -1,4 +1,4 @@
-//! Optional share-link email via SMTP (Mailgun on 2525 by default).
+//! Optional SMTP: share-link email and abuse reports (`ADMIN_REPORT_URL`).
 //!
 //! Sending a working link means the URL fragment (the key) is given to this
 //! process and to the mail provider. The UI only offers this when SMTP is
@@ -56,11 +56,11 @@ impl Mailer {
         })
     }
 
-    async fn send(&self, to: Mailbox, body: String) -> Result<(), String> {
+    async fn send(&self, to: Mailbox, subject: &str, body: String) -> Result<(), String> {
         let email = Message::builder()
             .from(self.from.clone())
             .to(to)
-            .subject(SUBJECT)
+            .subject(subject)
             .body(body)
             .map_err(|e| e.to_string())?;
         // Mailgun 2525 / 587: STARTTLS (not implicit TLS on 465).
@@ -134,7 +134,7 @@ pub(crate) async fn send_share_email(
     let max_views = req.max_views.filter(|&n| n >= 1 && n <= 1_000_000);
     let body = email_body(url, expires_in, max_views);
 
-    if let Err(e) = mailer.send(to, body).await {
+    if let Err(e) = mailer.send(to, SUBJECT, body).await {
         tracing::error!(error = %e, "share email smtp failed");
         return Err(err(
             StatusCode::BAD_GATEWAY,
@@ -330,6 +330,139 @@ pub(crate) fn human_ttl(secs: i64) -> String {
     }
 }
 
+const REPORT_SUBJECT: &str = "Tresorpost content report";
+const MAX_REPORT_MESSAGE_LEN: usize = 2000;
+
+pub(crate) fn admin_report_to_from_env() -> Option<String> {
+    let raw = std::env::var("ADMIN_REPORT_URL").ok()?;
+    parse_admin_report_to(&raw)
+}
+
+pub(crate) fn parse_admin_report_to(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let email = trimmed
+        .strip_prefix("mailto:")
+        .unwrap_or(trimmed)
+        .trim();
+    if email.parse::<Mailbox>().is_ok() {
+        return Some(email.to_string());
+    }
+    if valid_email(email) {
+        return Some(email.to_string());
+    }
+    None
+}
+
+#[derive(Deserialize)]
+pub(crate) struct ContentReportReq {
+    view_url: String,
+    #[serde(default)]
+    message: String,
+    #[serde(default)]
+    kind: String,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ContentReportResp {
+    ok: bool,
+}
+
+pub(crate) async fn send_content_report(
+    State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Json(req): Json<ContentReportReq>,
+) -> Result<Json<ContentReportResp>, (StatusCode, Json<ApiError>)> {
+    let Some(to_raw) = state.admin_report_to.as_deref() else {
+        return Err(err(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "reporting is not configured",
+        ));
+    };
+    let Some(mailer) = state.mailer.as_ref() else {
+        return Err(err(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "reporting is not configured",
+        ));
+    };
+    crate::rate::enforce_email_limit(&state, &headers, ConnectInfo(peer))?;
+
+    let to: Mailbox = to_raw
+        .parse()
+        .map_err(|_| err(StatusCode::INTERNAL_SERVER_ERROR, "reporting is not configured"))?;
+
+    let view_url = req.view_url.trim();
+    if view_url.len() > MAX_URL_LEN || !looks_like_share_url(view_url) {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid share link"));
+    }
+    if !share_url_allowed(view_url, &headers) {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid share link"));
+    }
+
+    let kind = match req.kind.trim() {
+        "text" | "image" | "video" | "file" => req.kind.trim(),
+        _ => "unknown",
+    };
+    let message = req.message.trim();
+    if message.len() > MAX_REPORT_MESSAGE_LEN {
+        return Err(err(StatusCode::BAD_REQUEST, "message is too long"));
+    }
+
+    let body = report_email_body(view_url, kind, message);
+
+    if let Err(e) = mailer.send(to, REPORT_SUBJECT, body).await {
+        tracing::error!(error = %e, "content report smtp failed");
+        return Err(err(
+            StatusCode::BAD_GATEWAY,
+            "could not send the report, try again later",
+        ));
+    }
+    tracing::info!("content report accepted by smtp");
+    Ok(Json(ContentReportResp { ok: true }))
+}
+
+/// Origin + `#/d/<id>/<token>` when the view URL carries a recipient delete token.
+pub(crate) fn delete_url_from_view(view_url: &str) -> Option<String> {
+    let (origin, frag) = view_url.split_once('#')?;
+    let decoded = percent_decode(frag);
+    let path = decoded.trim_start_matches('/');
+    let mut parts = path.split('/');
+    if parts.next() != Some("v") {
+        return None;
+    }
+    let id = parts.next()?;
+    let _key = parts.next()?;
+    let token = parts.next()?;
+    if token.is_empty() {
+        return None;
+    }
+    Some(format!("{origin}#/d/{id}/{token}"))
+}
+
+fn report_email_body(view_url: &str, kind: &str, message: &str) -> String {
+    let mut body = format!(
+        "A recipient reported a secret ({kind}).\n\n\
+         Opening the view link decrypts the content. The encryption key is in the URL.\n\n\
+         View:\n{view_url}\n"
+    );
+    if let Some(delete_url) = delete_url_from_view(view_url) {
+        body.push_str("\nDelete (recipient token):\n");
+        body.push_str(&delete_url);
+        body.push('\n');
+    } else {
+        body.push_str("\nNo delete link was attached to this share URL.\n");
+    }
+    if !message.is_empty() {
+        body.push_str("\nMessage:\n");
+        body.push_str(message);
+        body.push('\n');
+    }
+    body
+}
+
 fn email_body(url: &str, expires_in: i64, max_views: Option<i64>) -> String {
     let ttl = human_ttl(expires_in);
     let mut body = format!(
@@ -401,5 +534,43 @@ mod tests {
         assert!(b.contains("self-destruct after 1 hour"));
         assert!(b.contains("at most 1 time"));
         assert!(b.contains("You were sent a secure message"));
+    }
+
+    #[test]
+    fn admin_report_mailbox_from_url_or_mailto() {
+        assert_eq!(
+            parse_admin_report_to("reports@dol.ch").as_deref(),
+            Some("reports@dol.ch")
+        );
+        assert_eq!(
+            parse_admin_report_to("mailto:reports@dol.ch").as_deref(),
+            Some("reports@dol.ch")
+        );
+        assert_eq!(
+            parse_admin_report_to("Tresorpost <reports@dol.ch>").as_deref(),
+            Some("Tresorpost <reports@dol.ch>")
+        );
+        assert!(parse_admin_report_to("").is_none());
+        assert!(parse_admin_report_to("https://example.com/hook").is_none());
+    }
+
+    #[test]
+    fn report_email_includes_view_and_optional_delete() {
+        let view = "https://tresorpost.ch/#/v/abcdefghijkl/ABCDEFGHIJKLMNOPQRSTUV";
+        let with_del =
+            "https://tresorpost.ch/#/v/abcdefghijkl/ABCDEFGHIJKLMNOPQRSTUV/delTokendelToken";
+        let plain = report_email_body(view, "image", "spam");
+        assert!(plain.contains("View:\nhttps://tresorpost.ch/#/v/abcdefghijkl/"));
+        assert!(plain.contains("No delete link"));
+        assert!(plain.contains("Message:\nspam"));
+        assert!(plain.contains("(image)"));
+        let del = report_email_body(with_del, "file", "");
+        assert_eq!(
+            delete_url_from_view(with_del).as_deref(),
+            Some("https://tresorpost.ch/#/d/abcdefghijkl/delTokendelToken")
+        );
+        assert!(del.contains("Delete (recipient token):"));
+        assert!(del.contains("/#/d/abcdefghijkl/delTokendelToken"));
+        assert!(!del.contains("Message:"));
     }
 }

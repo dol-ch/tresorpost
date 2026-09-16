@@ -145,6 +145,15 @@ async fn main() {
         tracing::info!("share-email SMTP not configured — email UI disabled");
     }
 
+    let admin_report_to = mail::admin_report_to_from_env();
+    if admin_report_to.is_some() {
+        if mailer.is_some() {
+            tracing::info!("content reports enabled (ADMIN_REPORT_URL)");
+        } else {
+            tracing::warn!("ADMIN_REPORT_URL is set but SMTP is not — report button disabled");
+        }
+    }
+
     if let Some(short) = host::short_domain_host() {
         if let Some(public) = host::public_origin() {
             tracing::info!("SHORT_DOMAIN={short} redirects to {public}");
@@ -175,6 +184,7 @@ async fn main() {
         read_limiter,
         email_limiter,
         mailer,
+        admin_report_to,
         admin_auth_limiter,
         max_sqlite_bytes,
         max_s3_bytes,
@@ -187,6 +197,7 @@ async fn main() {
         .route("/stats", get(secrets::public_stats))
         .route("/secrets", post(secrets::create_secret))
         .route("/share-email", post(mail::send_share_email))
+        .route("/report", post(mail::send_content_report))
         .route("/secrets/{id}", get(secrets::read_secret).delete(secrets::delete_secret))
         .route("/uploads/init", post(uploads::upload_init))
         .route("/uploads/{id}/part-url", post(uploads::upload_part_url))

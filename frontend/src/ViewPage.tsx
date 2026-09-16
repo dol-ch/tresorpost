@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/common";
-import { fetchSecret, deleteSecret } from "./api";
+import { fetchSecret, deleteSecret, fetchConfig, sendContentReport } from "./api";
 import { decryptBytes, base64UrlToBytes, type StreamMeta, type StreamHeader } from "./crypto";
 import { decodePayload, base64ToBlob, type SecretPayload } from "./payload";
 import {
@@ -34,6 +34,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState, SelfDestructCard } from "@/components/kit";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 function progressPct(done: number, total: number) {
   if (!total) return 0;
@@ -182,7 +184,16 @@ function formatExpiry(sec: number): { absolute: string; relative: string } {
 
 export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
   const [status, setStatus] = useState<Status>({ state: "loading" });
+  const [reportEnabled, setReportEnabled] = useState(false);
   const started = useRef(false);
+
+  useEffect(() => {
+    fetchConfig()
+      .then((cfg) => setReportEnabled(Boolean(cfg.report_enabled)))
+      .catch(() => {
+        /* hide report if config is unavailable */
+      });
+  }, []);
 
   useEffect(() => {
     if (started.current) return;
@@ -312,6 +323,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
         id={id}
         keyB64Url={keyB64Url}
         recipientDeleteToken={recipientDeleteToken}
+        reportEnabled={reportEnabled}
         onDestroyed={() => setStatus({ state: "destroyed" })}
       />
     );
@@ -337,11 +349,12 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
           <>
             <RenderedText html={payload.data} />
             <ReportButton
+              enabled={reportEnabled}
               id={id}
               keyB64Url={keyB64Url}
+              recipientDeleteToken={recipientDeleteToken}
               kind="text"
               label="Report text"
-              payload={payload}
             />
           </>
         )}
@@ -356,11 +369,12 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
               <p className="text-sm text-muted-foreground">{payload.filename}</p>
             </div>
             <ReportButton
+              enabled={reportEnabled}
               id={id}
               keyB64Url={keyB64Url}
+              recipientDeleteToken={recipientDeleteToken}
               kind="image"
               label="Report image"
-              payload={payload}
             />
           </>
         )}
@@ -371,11 +385,12 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
               filename={payload.filename}
             />
             <ReportButton
+              enabled={reportEnabled}
               id={id}
               keyB64Url={keyB64Url}
+              recipientDeleteToken={recipientDeleteToken}
               kind="video"
               label="Report video"
-              payload={payload}
             />
           </>
         )}
@@ -383,11 +398,12 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
           <>
             <FileDownload payload={payload} />
             <ReportButton
+              enabled={reportEnabled}
               id={id}
               keyB64Url={keyB64Url}
+              recipientDeleteToken={recipientDeleteToken}
               kind="file"
               label="Report file"
-              payload={payload}
             />
           </>
         )}
@@ -415,12 +431,14 @@ function S3FileView({
   id,
   keyB64Url,
   recipientDeleteToken,
+  reportEnabled,
   onDestroyed,
 }: {
   status: S3Status;
   id: string;
   keyB64Url: string;
   recipientDeleteToken?: string;
+  reportEnabled: boolean;
   onDestroyed: () => void;
 }) {
   const { url, meta, key, header, viewsRemaining, expiresAt } = status;
@@ -570,11 +588,12 @@ function S3FileView({
         )}
 
         <ReportButton
+          enabled={reportEnabled}
           id={id}
           keyB64Url={keyB64Url}
+          recipientDeleteToken={recipientDeleteToken}
           kind={isVideo ? "video" : isImage ? "image" : "file"}
           label={isVideo ? "Report video" : isImage ? "Report image" : "Report file"}
-          header={header}
         />
 
         <div className="flex flex-col gap-2 pt-1">
@@ -590,56 +609,116 @@ function S3FileView({
   );
 }
 
+const MAX_REPORT_MESSAGE = 2000;
+
+function reportViewUrl(id: string, keyB64Url: string, recipientDeleteToken?: string): string {
+  const token = recipientDeleteToken ? `/${recipientDeleteToken}` : "";
+  return `${window.location.origin}/#/v/${id}/${keyB64Url}${token}`;
+}
+
 function ReportButton({
+  enabled,
   id,
   keyB64Url,
+  recipientDeleteToken,
   kind,
   label,
-  payload,
-  header,
 }: {
+  enabled: boolean;
   id: string;
   keyB64Url: string;
+  recipientDeleteToken?: string;
   kind: string;
   label: string;
-  payload?: SecretPayload;
-  header?: StreamHeader;
 }) {
-  const onConfirm = () => {
-    // TODO: submit report for admin review
-    console.log("Report secret", { id, key: keyB64Url, kind, payload, header });
-  };
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  if (!enabled) return null;
+  if (sent) {
+    return (
+      <Button variant="secondary" type="button" disabled>
+        Reported
+      </Button>
+    );
+  }
+
+  async function onConfirm(e: MouseEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await sendContentReport({
+        view_url: reportViewUrl(id, keyB64Url, recipientDeleteToken),
+        message: message.trim() || undefined,
+        kind,
+      });
+      setSent(true);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button
-          id={`report-${id}`}
-          data-id={id}
-          data-secret-id={id}
-          data-key={keyB64Url}
-          data-kind={kind}
-          variant="destructive"
-          type="button"
-        >
-          {label}
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Report this content?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Reporting this content will send the decryption key to administrators so that the file or note can be reviewed.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction className="text-destructive" onClick={onConfirm}>
-            Report
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <div className="flex flex-col gap-2">
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (busy) return;
+          setOpen(next);
+          if (!next) setError(null);
+        }}
+      >
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive" type="button">
+            {label}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report this content?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This sends the link — including the decryption key — to the site
+              administrators. They will be able to open and view the file or
+              note. Only report abuse you want them to see.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`report-message-${id}`}>Message (optional)</Label>
+            <Textarea
+              id={`report-message-${id}`}
+              value={message}
+              maxLength={MAX_REPORT_MESSAGE}
+              disabled={busy}
+              placeholder="Why are you reporting this?"
+              onChange={(e) => setMessage(e.target.value)}
+            />
+          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={busy}
+              onClick={onConfirm}
+            >
+              {busy ? "Sending…" : "Send to administrators"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
 

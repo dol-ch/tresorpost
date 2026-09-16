@@ -142,7 +142,7 @@ impl CreateLimiter {
     }
 }
 
-/// POST `/api/share-email` limiter.
+/// POST `/api/share-email` and `/api/report` limiter.
 #[derive(Clone)]
 pub(crate) struct EmailLimiter(Limiter);
 
