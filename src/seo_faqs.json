@@ -29,7 +29,7 @@
   },
   {
     "q": "How large can a file be? Can I send images and video?",
-    "a": "Text, images, video and generic files are supported. Size is limited by the server operator (5 MB by default, more with S3 configured). Text notes have no practical limit."
+    "a": "Text, images, video and generic files are supported, up to 5 GB per file on tresorpost.ch. Text notes have no practical size limit."
   },
   {
     "q": "Can I delete a note before it is read?",

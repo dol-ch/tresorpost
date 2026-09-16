@@ -16,7 +16,7 @@ import {
 } from "./payload";
 import { createSecret, fetchConfig, sendShareEmail } from "./api";
 import { uploadLargeFile } from "./largeFile";
-import { EXPIRY_OPTIONS, MAX_FILE_BYTES, humanSize } from "./options";
+import { EXPIRY_OPTIONS, MAX_FILE_BYTES, humanSize, uploadMaxBytes } from "./options";
 import { copyText } from "./clipboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -133,9 +133,9 @@ export function CreatePage() {
     (kind === "file" ||
       kind === "video" ||
       (kind === "image" && file !== null && file.size > maxFileBytes));
-  const effectiveMax = s3Enabled && kind !== "text" ? maxS3FileBytes : maxFileBytes;
-  const maxLabel = humanSize(effectiveMax);
-  const fileTooBig = !!file && file.size > effectiveMax;
+  const uploadMax = uploadMaxBytes(s3Enabled, maxS3FileBytes, maxFileBytes);
+  const maxLabel = humanSize(uploadMax);
+  const fileTooBig = !!file && file.size > uploadMax;
 
   useEffect(() => {
     if (!shareUrl) {
@@ -173,7 +173,7 @@ export function CreatePage() {
       return { kind: "text", data: html };
     }
     if (!file) throw new Error("Choose a file first.");
-    if (file.size > effectiveMax) {
+    if (file.size > uploadMax) {
       throw new Error(`File is too large (${humanSize(file.size)}). Max is ${maxLabel}.`);
     }
     const data = await fileToBase64(file);
@@ -192,7 +192,7 @@ export function CreatePage() {
 
       if (useS3) {
         if (!file) throw new Error("Choose a file first.");
-        if (file.size > effectiveMax) {
+        if (file.size > uploadMax) {
           throw new Error(`File is too large (${humanSize(file.size)}). Max is ${maxLabel}.`);
         }
         const ac = new AbortController();
@@ -258,9 +258,8 @@ export function CreatePage() {
 
   function takeFile(next: File | null) {
     setError(null);
-    if (next && next.size > (s3Enabled ? maxS3FileBytes : maxFileBytes)) {
-      const cap = s3Enabled ? maxS3FileBytes : maxFileBytes;
-      setError(`File is too large (${humanSize(next.size)}). Max is ${humanSize(cap)}.`);
+    if (next && next.size > uploadMax) {
+      setError(`File is too large (${humanSize(next.size)}). Max is ${maxLabel}.`);
     }
     setFile(next);
     if (next) setEditorOpen(false);
@@ -501,7 +500,7 @@ export function CreatePage() {
             <textarea
               readOnly
               rows={5}
-              placeholder="Write a message, or drop a file here…"
+              placeholder={`Write a message, or drop a file here (up to ${maxLabel})…`}
               aria-label="Write a message"
               className="min-h-[140px] w-full resize-none border-0 bg-transparent p-3.5 text-[15px] leading-relaxed outline-none placeholder:text-muted-foreground"
               onFocus={() => setEditorOpen(true)}
@@ -536,11 +535,13 @@ export function CreatePage() {
             ) : (
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-[10px] px-1.5 py-1 text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="inline-flex min-w-0 items-center gap-2 rounded-[10px] px-1.5 py-1 text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={`Attach a file, up to ${maxLabel}`}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Paperclip className="size-4" strokeWidth={1.8} />
+                <Paperclip className="size-4 shrink-0" strokeWidth={1.8} />
                 Attach a file
+                <span className="font-normal text-muted-foreground/75">up to {maxLabel}</span>
               </button>
             )}
             <span className="truncate text-[12.5px] text-muted-foreground">

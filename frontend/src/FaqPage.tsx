@@ -1,6 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { fetchConfig } from "./api";
+import { MAX_FILE_BYTES, humanSize, uploadMaxBytes } from "./options";
 import faqs from "./content/faqs.json";
 
 function Step({ num, title, body }: { num: string; title: string; body: string }) {
@@ -27,8 +29,27 @@ function Qa({ q, a }: { q: string; a: string }) {
 }
 
 const FAQS: { q: string; a: string }[] = faqs;
+const SIZE_Q = "How large can a file be? Can I send images and video?";
 
 export function FaqPage() {
+  const [items, setItems] = useState(FAQS);
+
+  useEffect(() => {
+    fetchConfig()
+      .then((cfg) => {
+        const cap = uploadMaxBytes(
+          cfg.s3_enabled,
+          cfg.max_s3_file_bytes,
+          cfg.max_file_bytes || MAX_FILE_BYTES,
+        );
+        const a = `Text, images, video and generic files are supported, up to ${humanSize(cap)} per file. Text notes have no practical size limit.`;
+        setItems(FAQS.map((item) => (item.q === SIZE_Q ? { ...item, a } : item)));
+      })
+      .catch(() => {
+        /* keep the static answer */
+      });
+  }, []);
+
   useEffect(() => {
     const id = "tresorpost-faq-jsonld";
     const script =
@@ -37,7 +58,7 @@ export function FaqPage() {
     script.textContent = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      mainEntity: FAQS.map((item) => ({
+      mainEntity: items.map((item) => ({
         "@type": "Question",
         name: item.q,
         acceptedAnswer: { "@type": "Answer", text: item.a },
@@ -45,7 +66,7 @@ export function FaqPage() {
     });
     if (!script.parentNode) document.head.appendChild(script);
     return () => script.remove();
-  }, []);
+  }, [items]);
 
   return (
     <>
@@ -82,7 +103,7 @@ export function FaqPage() {
 
       <Card>
         <CardContent className="flex flex-col gap-4.5">
-          {FAQS.map((item, i) => (
+          {items.map((item, i) => (
             <div key={item.q}>
               {i > 0 ? <div className="mb-4.5 h-px bg-border" /> : null}
               <Qa q={item.q} a={item.a} />
