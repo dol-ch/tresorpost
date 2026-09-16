@@ -198,7 +198,7 @@
   @apply bg-transparent p-0;
 }
 .rendered-text {
-  @apply rounded-[14px] bg-muted px-[18px] py-[18px] text-[15px] leading-relaxed break-words;
+  @apply rounded-[14px] border border-border bg-card px-3.5 py-3.5 text-[15px] leading-relaxed break-words;
 }
 .rendered-text pre.code-block {
   @apply relative;
