@@ -3,9 +3,9 @@
 use std::{collections::HashMap, net::SocketAddr};
 
 use axum::{
+    Json,
     extract::{ConnectInfo, State},
     http::{HeaderMap, StatusCode},
-    Json,
 };
 use serde::Serialize;
 use sqlx::Row;
@@ -174,13 +174,7 @@ pub(crate) async fn admin_purge(
 ) -> Result<Json<PurgeResp>, (StatusCode, Json<ApiError>)> {
     check_admin(&state, &headers, ConnectInfo(peer))?;
     let now = now_secs();
-    let purged = purge_expired(
-        &state.pool,
-        &state.s3,
-        now,
-        state.pending_upload_ttl_secs,
-    )
-    .await;
+    let purged = purge_expired(&state.pool, &state.s3, now, state.pending_upload_ttl_secs).await;
     if purged > 0 {
         bump(&state.pool, "expired_total", purged as i64).await;
     }
@@ -212,12 +206,11 @@ pub(crate) async fn admin_active(
     check_admin(&state, &headers, ConnectInfo(peer))?;
     let now = now_secs();
 
-    let total: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM secrets WHERE expires_at > ?")
-            .bind(now)
-            .fetch_one(&state.pool)
-            .await
-            .unwrap_or(0);
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM secrets WHERE expires_at > ?")
+        .bind(now)
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(0);
 
     let mut items: Vec<ActiveItem> = Vec::new();
     if let Ok(rows) = sqlx::query(
@@ -242,4 +235,110 @@ pub(crate) async fn admin_active(
     }
 
     Ok(Json(ActiveResp { items, total }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::HeaderValue;
+    use std::net::{Ipv4Addr, SocketAddrV4};
+
+    async fn test_state(admin_token: Option<&str>) -> (AppState, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!(
+            "tresorpost-admin-test-{}-{}",
+            std::process::id(),
+            rand::random::<u64>()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("data.db");
+        let pool = crate::db::init_db(&path.to_string_lossy()).await;
+        let state = AppState {
+            pool,
+            db_path: path.to_string_lossy().into_owned(),
+            admin_token: admin_token.map(|s| s.to_string()),
+            max_file_bytes: 5 * 1024 * 1024,
+            max_ciphertext_chars: 1_000_000,
+            s3: None,
+            create_limiter: crate::rate::CreateLimiter::from_env(),
+            read_limiter: crate::rate::ReadLimiter::from_env(),
+            email_limiter: crate::rate::EmailLimiter::from_env(),
+            mailer: None,
+            admin_report_to: None,
+            admin_auth_limiter: crate::rate::AdminAuthLimiter::from_env(),
+            max_sqlite_bytes: 0,
+            max_s3_bytes: 0,
+            pending_upload_ttl_secs: 21_600,
+        };
+        (state, dir)
+    }
+
+    fn peer(n: u8) -> ConnectInfo<SocketAddr> {
+        ConnectInfo(SocketAddr::V4(SocketAddrV4::new(
+            Ipv4Addr::new(198, 51, 100, n),
+            9999,
+        )))
+    }
+
+    fn headers_with_token(token: &str) -> HeaderMap {
+        let mut h = HeaderMap::new();
+        h.insert("x-admin-token", HeaderValue::from_str(token).unwrap());
+        h
+    }
+
+    #[tokio::test]
+    async fn admin_disabled_without_token_env() {
+        let (state, dir) = test_state(None).await;
+        let result = check_admin(&state, &HeaderMap::new(), peer(1));
+        assert_eq!(result.unwrap_err().0, StatusCode::NOT_FOUND);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn correct_token_succeeds() {
+        let (state, dir) = test_state(Some("supersecret")).await;
+        let result = check_admin(&state, &headers_with_token("supersecret"), peer(2));
+        assert!(result.is_ok());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn missing_token_header_is_unauthorized() {
+        let (state, dir) = test_state(Some("supersecret")).await;
+        let result = check_admin(&state, &HeaderMap::new(), peer(3));
+        assert_eq!(result.unwrap_err().0, StatusCode::UNAUTHORIZED);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn wrong_token_is_unauthorized_then_rate_limited() {
+        let (state, dir) = test_state(Some("supersecret")).await;
+        let max = state.admin_auth_limiter.max();
+        if max == 0 {
+            // ADMIN_AUTH_MAX_FAILURES=0 in this environment disables the
+            // limiter entirely; nothing to assert about lockout.
+            let _ = std::fs::remove_dir_all(&dir);
+            return;
+        }
+        let p = peer(4);
+        for _ in 0..max {
+            let result = check_admin(&state, &headers_with_token("wrong"), p);
+            assert_eq!(result.unwrap_err().0, StatusCode::UNAUTHORIZED);
+        }
+        // The next attempt is locked out before the token is even compared,
+        // even if it happens to be correct.
+        let result = check_admin(&state, &headers_with_token("supersecret"), p);
+        assert_eq!(result.unwrap_err().0, StatusCode::TOO_MANY_REQUESTS);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn successful_auth_does_not_consume_failure_budget() {
+        let (state, dir) = test_state(Some("supersecret")).await;
+        let p = peer(5);
+        for _ in 0..50 {
+            let result = check_admin(&state, &headers_with_token("supersecret"), p);
+            assert!(result.is_ok());
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
