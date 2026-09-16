@@ -165,21 +165,57 @@
 .editor-host .ProseMirror p {
   @apply my-1.5;
 }
-.editor-host .ProseMirror h1 {
-  @apply font-heading my-2 text-xl font-semibold;
-}
-.editor-host .ProseMirror h2 {
-  @apply font-heading my-2 text-lg font-semibold;
+/* Tailwind preflight zeros list-style/padding; ProseMirror inherits
+   white-space: break-spaces which hides ::marker in Chromium. */
+.editor-host .ProseMirror ul,
+.editor-host .ProseMirror ol,
+.rendered-text ul,
+.rendered-text ol {
+  display: block;
+  margin-block: 0.375rem;
+  padding-inline-start: 1.75rem;
+  white-space: normal;
 }
 .editor-host .ProseMirror ul,
-.editor-host .ProseMirror ol {
-  @apply my-1.5 pl-5;
+.rendered-text ul {
+  list-style-type: disc;
+  list-style-position: outside;
 }
-.editor-host .ProseMirror blockquote {
-  @apply my-2 border-l-2 pl-3 text-muted-foreground;
+.editor-host .ProseMirror ol,
+.rendered-text ol {
+  list-style-type: decimal;
+  list-style-position: outside;
 }
-.editor-host .ProseMirror hr {
-  @apply my-3 border-t;
+.editor-host .ProseMirror li,
+.rendered-text li {
+  display: list-item;
+  margin-block: 0.125rem;
+  white-space: normal;
+}
+.editor-host .ProseMirror li > p,
+.rendered-text li > p {
+  margin-block: 0.125rem;
+}
+.editor-host .ProseMirror blockquote,
+.rendered-text blockquote {
+  display: block;
+  margin-block: 0.5rem;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 2px solid var(--border);
+  color: var(--muted-foreground);
+  white-space: normal;
+}
+.editor-host .ProseMirror h1,
+.rendered-text h1 {
+  @apply font-heading my-2 text-xl font-semibold;
+}
+.editor-host .ProseMirror h2,
+.rendered-text h2 {
+  @apply font-heading my-2 text-lg font-semibold;
+}
+.editor-host .ProseMirror hr,
+.rendered-text hr {
+  @apply my-3 border-t border-border;
 }
 .editor-host .ProseMirror code,
 .rendered-text code {

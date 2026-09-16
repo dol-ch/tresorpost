@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
+import { toggleMark, setBlockType, wrapIn, lift } from "prosemirror-commands";
 import { undo, redo } from "prosemirror-history";
 import type { MarkType, NodeType } from "prosemirror-model";
-import { wrapInList } from "prosemirror-schema-list";
+import { wrapInList, liftListItem } from "prosemirror-schema-list";
 import type { Command, EditorState } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 
@@ -166,6 +166,35 @@ export function EditorToolbar({ view }: { view: EditorView }) {
     run(view, active ? setBlockType(paragraph) : setBlockType(heading, { level }));
   };
 
+  const toggleList = (listType: NodeType) => {
+    const item = schema.nodes.list_item;
+    const { $from } = state.selection;
+    for (let d = $from.depth; d > 0; d--) {
+      const node = $from.node(d);
+      if (node.type === listType) {
+        run(view, liftListItem(item));
+        return;
+      }
+      if (node.type === bullet || node.type === ordered) {
+        const convert: Command = (s, dispatch) => {
+          if (dispatch) dispatch(s.tr.setNodeMarkup($from.before(d), listType));
+          return true;
+        };
+        run(view, convert);
+        return;
+      }
+    }
+    run(view, wrapInList(listType));
+  };
+
+  const toggleQuote = () => {
+    if (wrappedIn(state, quote)) {
+      run(view, lift);
+      return;
+    }
+    run(view, wrapIn(quote));
+  };
+
   const markBtn = (
     key: string,
     title: string,
@@ -218,24 +247,24 @@ export function EditorToolbar({ view }: { view: EditorView }) {
         title: "Bullet list",
         content: <Svg>{I.list}</Svg>,
         active: wrappedIn(state, bullet),
-        enabled: canRun(view, wrapInList(bullet)) || wrappedIn(state, bullet),
-        onRun: () => run(view, wrapInList(bullet)),
+        enabled: canRun(view, wrapInList(bullet)) || wrappedIn(state, bullet) || wrappedIn(state, ordered),
+        onRun: () => toggleList(bullet),
       },
       {
         key: "ordered",
         title: "Numbered list",
         content: <Svg>{I.listOrdered}</Svg>,
         active: wrappedIn(state, ordered),
-        enabled: canRun(view, wrapInList(ordered)) || wrappedIn(state, ordered),
-        onRun: () => run(view, wrapInList(ordered)),
+        enabled: canRun(view, wrapInList(ordered)) || wrappedIn(state, ordered) || wrappedIn(state, bullet),
+        onRun: () => toggleList(ordered),
       },
       {
         key: "quote",
         title: "Quote",
         content: <Svg>{I.quote}</Svg>,
         active: wrappedIn(state, quote),
-        enabled: canRun(view, wrapIn(quote)),
-        onRun: () => run(view, wrapIn(quote)),
+        enabled: canRun(view, wrapIn(quote)) || wrappedIn(state, quote),
+        onRun: () => toggleQuote(),
       },
       {
         key: "hr",
