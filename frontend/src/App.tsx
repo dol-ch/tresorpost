@@ -70,18 +70,29 @@ function onInternalClick(event: MouseEvent<HTMLAnchorElement>, href: string) {
   }
   event.preventDefault();
   const next = new URL(href, window.location.origin);
-  const dest = `${next.pathname}${next.search}${next.hash}`;
-  const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  if (dest === here) return;
+  const dest =
+    next.pathname === "/" && !next.search && !next.hash
+      ? "/"
+      : `${next.pathname}${next.search}${next.hash}`;
   window.history.pushState(null, "", dest);
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-function NavLink({ href, active, children }: { href: string; active: boolean; children: string }) {
+function NavLink({
+  href,
+  active,
+  children,
+  onClick,
+}: {
+  href: string;
+  active: boolean;
+  children: string;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+}) {
   return (
     <a
       href={href}
-      onClick={(event) => onInternalClick(event, href)}
+      onClick={(event) => (onClick ? onClick(event) : onInternalClick(event, href))}
       className={cn(
         "rounded-[9px] px-2.5 py-1.5 font-sans text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
         active && "text-primary hover:text-primary",
@@ -94,6 +105,24 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
 
 export function App() {
   const [route, setRoute] = useState<Route>(parseRoute);
+  const [composeKey, setComposeKey] = useState(0);
+
+  function goHome(event: MouseEvent<HTMLAnchorElement>) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    window.history.pushState(null, "", "/");
+    setComposeKey((k) => k + 1);
+    setRoute({ name: "create" });
+  }
 
   useEffect(() => {
     migrateHashMarketingUrls();
@@ -153,12 +182,12 @@ export function App() {
           <a
             className="mr-auto inline-flex min-w-0 shrink items-center gap-2 whitespace-nowrap"
             href="/"
-            onClick={(event) => onInternalClick(event, "/")}
+            onClick={goHome}
             aria-label={brand.name}
           >
             <Wordmark />
           </a>
-          <NavLink href="/" active={sendActive}>
+          <NavLink href="/" active={sendActive} onClick={goHome}>
             Send
           </NavLink>
           <NavLink href="/faq" active={route.name === "faq"}>
@@ -182,7 +211,7 @@ export function App() {
                   the server.
                 </p>
               </section>
-              <CreatePage />
+              <CreatePage key={composeKey} />
             </>
           )}
           {route.name === "view" && (

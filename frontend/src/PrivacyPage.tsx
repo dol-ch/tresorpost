@@ -74,7 +74,7 @@ export function PrivacyPage() {
           <div>
             <Kicker className="mb-2.5">Never stored</Kicker>
             <div className="flex flex-col gap-2">
-              <CrossRow>Encryption keys — they stay in the URL fragment (unless you email the link)</CrossRow>
+              <CrossRow>Encryption keys — they stay in the URL fragment (unless you email the link or report the content)</CrossRow>
               <CrossRow>Plaintext, filenames or previews</CrossRow>
               <CrossRow>Accounts, analytics or advertising cookies</CrossRow>
               <CrossRow>Recipient addresses — email is handed to SMTP and not stored</CrossRow>

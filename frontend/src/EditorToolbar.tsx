@@ -265,7 +265,7 @@ export function EditorToolbar({ view }: { view: EditorView }) {
 
   return (
     <div
-      className="flex items-center gap-0.5 overflow-x-auto border-b border-border bg-muted px-2 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex items-center gap-0.5 overflow-x-auto border-t border-border bg-card px-2 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="toolbar"
       aria-label="Formatting"
     >
@@ -279,8 +279,8 @@ export function EditorToolbar({ view }: { view: EditorView }) {
               size="icon-xs"
               variant="ghost"
               className={cn(
-                "size-8 rounded-[8px] text-muted-foreground hover:bg-border hover:text-foreground",
-                it.active && "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,.08)]",
+                "size-8 rounded-[8px] text-muted-foreground hover:bg-muted hover:text-foreground",
+                it.active && "bg-muted text-foreground",
               )}
               title={it.title}
               aria-label={it.title}

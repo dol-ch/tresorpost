@@ -79,8 +79,9 @@ The server exposes a small API and, in production, serves the built SPA:
 - `POST /api/secrets`: store `{ ciphertext, nonce, expires_in, max_views, kind, allow_delete, allow_recipient_delete }`, returns `{ id, delete_token?, recipient_delete_token? }`. `429` if the per-IP create limit is exceeded. `507` if the SQLite file would exceed `MAX_SQLITE_MB`.
 - `GET  /api/secrets/{id}`: atomically consumes one view, returns ciphertext (SQLite) or a presigned download URL (S3), or `404` when expired/exhausted. `429` if the per-IP read limit is exceeded.
 - `DELETE /api/secrets/{id}`: destroy with `{ delete_token }` (creator or recipient token). Same `404` for unknown id or wrong token. `503` if the S3 object could not be deleted (the row is kept so a retry can finish). `429` if the per-IP read limit is exceeded.
-- `GET  /api/config`: `{ max_file_bytes, s3_enabled, max_s3_file_bytes, email_enabled }`.
+- `GET  /api/config`: `{ max_file_bytes, s3_enabled, max_s3_file_bytes, email_enabled, report_enabled }`.
 - `POST /api/share-email`: `{ to, url, expires_in, max_views }` sends the share link over SMTP. `429` if the per-IP email limit is exceeded. `503` if SMTP is not configured.
+- `POST /api/report`: `{ view_url, message?, kind }` emails the view (and recipient-delete) link to `ADMIN_REPORT_URL`. Same email rate limit. `503` if SMTP or `ADMIN_REPORT_URL` is missing.
 - `GET  /api/health`: liveness.
 - `POST /api/uploads/init`: begin an S3 multipart upload (large files). `429` if the create rate limit is exceeded. `507` if `MAX_S3_GB` (or the SQLite cap) would be exceeded.
 - `POST /api/uploads/{id}/part-url`: presigned PUT URL for one encrypted chunk.
@@ -222,8 +223,9 @@ if present (copy `.env.example` to `.env`):
 | `SMTP_FROM`               | _(unset)_      | From mailbox, e.g. `Tresorpost <noreply@mg.example.com>`.      |
 | `PUBLIC_URL`              | _(unset)_      | Canonical origin (`https://tresorpost.ch`). Target of `SHORT_DOMAIN` redirects, share emails must use this host. |
 | `SHORT_DOMAIN`            | _(unset)_      | Short host (`tpst.ch`). Any request on that host 301s to `PUBLIC_URL` (path + query copied, `#` kept by the browser). Share/delete links are minted on `https://SHORT_DOMAIN`. |
-| `EMAIL_RATE_LIMIT`        | `3`            | Max share emails per IP per window. `0` disables.              |
-| `EMAIL_RATE_WINDOW_SECS`  | `60`           | Share-email rate-limit window (default 1 minute).              |
+| `EMAIL_RATE_LIMIT`        | `3`            | Max share emails / content reports per IP per window. `0` disables. |
+| `EMAIL_RATE_WINDOW_SECS`  | `60`           | Share-email / report rate-limit window (default 1 minute).     |
+| `ADMIN_REPORT_URL`        | _(unset)_      | Mailbox that receives abuse reports (`reports@…`, `mailto:…`, or `Name <email>`). Needs SMTP. Hides the Report button when unset. |
 | `PORT`                  | `3000`         | HTTP port.                                                     |
 | `DATABASE_PATH`         | `db/data.db`   | SQLite database file path.                                     |
 | `STATIC_DIR`            | `frontend/dist`| Built frontend directory to serve.                             |

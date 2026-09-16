@@ -103,6 +103,9 @@ pub(crate) struct AppState {
     pub(crate) read_limiter: crate::rate::ReadLimiter,
     pub(crate) email_limiter: crate::rate::EmailLimiter,
     pub(crate) mailer: Option<crate::mail::Mailer>,
+    /// Inbox that receives abuse reports (`ADMIN_REPORT_URL`). Email address,
+    /// optionally `mailto:`. None = report UI off.
+    pub(crate) admin_report_to: Option<String>,
     pub(crate) admin_auth_limiter: crate::rate::AdminAuthLimiter,
     /// 0 = unlimited.
     pub(crate) max_sqlite_bytes: u64,

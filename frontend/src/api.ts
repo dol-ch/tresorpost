@@ -63,6 +63,8 @@ export interface AppConfig {
   s3_enabled: boolean;
   max_s3_file_bytes: number;
   email_enabled?: boolean;
+  /** When true, view pages show Report (SMTP + ADMIN_REPORT_URL). */
+  report_enabled?: boolean;
   /** `https://SHORT_DOMAIN` when the server mints short share links. */
   short_origin?: string;
 }
@@ -91,6 +93,27 @@ export async function sendShareEmail(input: {
   }
   if (res.status === 503) {
     throw new Error("Email sending is not configured on this server.");
+  }
+  throw new Error(msg.error || `request failed (${res.status})`);
+}
+
+export async function sendContentReport(input: {
+  view_url: string;
+  message?: string;
+  kind: string;
+}): Promise<void> {
+  const res = await fetch("/api/report", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (res.ok) return;
+  const msg = await res.json().catch(() => ({ error: res.statusText }));
+  if (res.status === 429) {
+    throw new Error(msg.error || "Too many reports. Wait a minute and try again.");
+  }
+  if (res.status === 503) {
+    throw new Error("Reporting is not configured on this server.");
   }
   throw new Error(msg.error || `request failed (${res.status})`);
 }
