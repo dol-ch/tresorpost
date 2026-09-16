@@ -14,7 +14,7 @@ use std::{
 
 use axum::{
     body::Body,
-    http::{HeaderName, HeaderValue, Request, Response, header},
+    http::{header, HeaderName, HeaderValue, Request, Response},
 };
 use tower::Service;
 
@@ -213,12 +213,7 @@ fn replace_quoted_attr_after(html: &str, from: usize, prefix: &str, value: &str)
     let Some(end_rel) = html[value_start..].find('"') else {
         return html.to_string();
     };
-    splice(
-        html,
-        value_start,
-        value_start + end_rel,
-        &escape_attr(value),
-    )
+    splice(html, value_start, value_start + end_rel, &escape_attr(value))
 }
 
 fn splice(html: &str, start: usize, end: usize, insert: &str) -> String {
@@ -338,9 +333,7 @@ mod tests {
         assert!(out.contains("id=\"tresorpost-faq-jsonld\""));
         assert!(out.contains("FAQPage"));
         assert!(out.contains("So funktioniert Tresorpost"));
-        assert!(
-            !out.contains("<title>Tresorpost — encrypted self-destructing file transfer</title>")
-        );
+        assert!(!out.contains("<title>Tresorpost — encrypted self-destructing file transfer</title>"));
     }
 
     #[test]

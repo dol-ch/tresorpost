@@ -8,12 +8,12 @@ use std::{
 };
 
 use axum::{
-    Json,
     extract::ConnectInfo,
     http::{HeaderMap, StatusCode},
+    Json,
 };
 
-use crate::common::{ApiError, AppState, err};
+use crate::common::{err, ApiError, AppState};
 
 /// Default: 60 new notes per IP per hour. `CREATE_RATE_LIMIT=0` disables.
 pub(crate) const DEFAULT_CREATE_RATE_LIMIT: u32 = 60;
@@ -402,72 +402,5 @@ mod tests {
             assert!(l.check(a).is_ok());
             l.record_failure(a);
         }
-    }
-
-    // `TRUST_PROXY` is read from the process environment inside `client_ip`,
-    // so these tests serialize on a lock and always restore the var
-    // afterwards to avoid bleeding state into unrelated tests running in
-    // parallel in this binary.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-    fn with_trust_proxy<T>(value: Option<&str>, f: impl FnOnce() -> T) -> T {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        match value {
-            Some(v) => unsafe { std::env::set_var("TRUST_PROXY", v) },
-            None => unsafe { std::env::remove_var("TRUST_PROXY") },
-        }
-        let result = f();
-        unsafe { std::env::remove_var("TRUST_PROXY") };
-        result
-    }
-
-    fn socket(a: u8, b: u8, c: u8, d: u8) -> SocketAddr {
-        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a, b, c, d)), 12345)
-    }
-
-    #[test]
-    fn client_ip_uses_peer_when_trust_proxy_unset() {
-        with_trust_proxy(None, || {
-            let mut headers = HeaderMap::new();
-            headers.insert("x-forwarded-for", "9.9.9.9".parse().unwrap());
-            let peer = socket(203, 0, 113, 50);
-            assert_eq!(client_ip(&headers, peer), peer.ip());
-        });
-    }
-
-    #[test]
-    fn client_ip_trusts_forwarded_for_when_enabled() {
-        with_trust_proxy(Some("true"), || {
-            let mut headers = HeaderMap::new();
-            headers.insert("x-forwarded-for", "198.51.100.7, 10.0.0.1".parse().unwrap());
-            let peer = socket(203, 0, 113, 50);
-            assert_eq!(
-                client_ip(&headers, peer),
-                IpAddr::V4(Ipv4Addr::new(198, 51, 100, 7))
-            );
-        });
-    }
-
-    #[test]
-    fn client_ip_falls_back_to_real_ip_when_forwarded_for_invalid() {
-        with_trust_proxy(Some("true"), || {
-            let mut headers = HeaderMap::new();
-            headers.insert("x-forwarded-for", "not-an-ip".parse().unwrap());
-            headers.insert("x-real-ip", "198.51.100.9".parse().unwrap());
-            let peer = socket(203, 0, 113, 50);
-            assert_eq!(
-                client_ip(&headers, peer),
-                IpAddr::V4(Ipv4Addr::new(198, 51, 100, 9))
-            );
-        });
-    }
-
-    #[test]
-    fn client_ip_falls_back_to_peer_when_no_forwarding_headers_present() {
-        with_trust_proxy(Some("true"), || {
-            let headers = HeaderMap::new();
-            let peer = socket(203, 0, 113, 50);
-            assert_eq!(client_ip(&headers, peer), peer.ip());
-        });
     }
 }

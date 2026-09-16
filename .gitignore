@@ -17,8 +17,4 @@ frontend/src/brand/private/
 
 .DS_Store
 *.log
-
-# IDE project files (JetBrains, VS Code)
-.idea/
-.vscode/
 /.idea

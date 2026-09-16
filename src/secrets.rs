@@ -3,10 +3,10 @@
 use std::net::SocketAddr;
 
 use axum::{
-    Json,
     extract::{ConnectInfo, Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
+    Json,
 };
 use serde::Serialize;
 use sqlx::Row;
@@ -58,12 +58,12 @@ pub(crate) struct PublicStats {
 }
 
 pub(crate) async fn public_stats(State(state): State<AppState>) -> Json<PublicStats> {
-    Json(public_stats_from_metrics(
-        crate::db::load_metrics(&state.pool).await,
-    ))
+    Json(public_stats_from_metrics(crate::db::load_metrics(&state.pool).await))
 }
 
-pub(crate) fn public_stats_from_metrics(m: std::collections::HashMap<String, i64>) -> PublicStats {
+pub(crate) fn public_stats_from_metrics(
+    m: std::collections::HashMap<String, i64>,
+) -> PublicStats {
     let get_m = |k: &str| m.get(k).copied().unwrap_or(0);
     let mut by_kind = std::collections::HashMap::new();
     for k in ["text", "image", "video", "file"] {
@@ -312,11 +312,10 @@ pub(crate) async fn delete_secret(
     let creator: Option<String> = row.get("delete_token_hash");
     let recipient: Option<String> = row.get("recipient_delete_hash");
     let dummy = "0".repeat(64);
-    let a = creator
-        .filter(|h| h.len() == 64)
-        .unwrap_or_else(|| dummy.clone());
+    let a = creator.filter(|h| h.len() == 64).unwrap_or_else(|| dummy.clone());
     let b = recipient.filter(|h| h.len() == 64).unwrap_or(dummy);
-    if !(delete_token_matches(&a, &req.delete_token) | delete_token_matches(&b, &req.delete_token))
+    if !(delete_token_matches(&a, &req.delete_token)
+        | delete_token_matches(&b, &req.delete_token))
     {
         return Err(err(StatusCode::NOT_FOUND, "not found"));
     }

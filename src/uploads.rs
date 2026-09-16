@@ -3,9 +3,9 @@
 use std::net::SocketAddr;
 
 use axum::{
-    Json,
     extract::{ConnectInfo, Path, State},
     http::{HeaderMap, StatusCode},
+    Json,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
@@ -82,8 +82,11 @@ pub(crate) async fn upload_init(
 
     let now = now_secs();
     let secret_expires_at = now + req.expires_in;
-    let expires_at =
-        crate::db::pending_expires_at(now, req.expires_in, state.pending_upload_ttl_secs);
+    let expires_at = crate::db::pending_expires_at(
+        now,
+        req.expires_in,
+        state.pending_upload_ttl_secs,
+    );
     let pending_purge_after = expires_at;
     let kind = normalize_kind(&req.kind);
     let s3_key = S3Backend::random_key();
@@ -144,10 +147,7 @@ pub(crate) async fn upload_init(
     }
 
     let _ = s3.abort_multipart(&s3_key, &upload_id).await;
-    Err(err(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        "could not allocate id",
-    ))
+    Err(err(StatusCode::INTERNAL_SERVER_ERROR, "could not allocate id"))
 }
 
 #[derive(Deserialize)]
@@ -183,10 +183,7 @@ pub(crate) async fn pending_upload(
     let upload_id: Option<String> = row.get("upload_id");
     match (key, upload_id) {
         (Some(k), Some(u)) => Ok((k, u)),
-        _ => Err(err(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "missing upload state",
-        )),
+        _ => Err(err(StatusCode::INTERNAL_SERVER_ERROR, "missing upload state")),
     }
 }
 

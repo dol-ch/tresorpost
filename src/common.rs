@@ -148,6 +148,7 @@ pub(crate) fn normalize_kind(kind: &Option<String>) -> &'static str {
     }
 }
 
+
 pub(crate) async fn bump(pool: &SqlitePool, name: &str, delta: i64) {
     let _ = sqlx::query(
         "INSERT INTO metrics (name, value) VALUES (?, ?) \

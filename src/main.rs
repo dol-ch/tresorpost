@@ -4,9 +4,9 @@
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
-    Router,
     extract::DefaultBodyLimit,
     routing::{get, post},
+    Router,
 };
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
@@ -198,10 +198,7 @@ async fn main() {
         .route("/secrets", post(secrets::create_secret))
         .route("/share-email", post(mail::send_share_email))
         .route("/report", post(mail::send_content_report))
-        .route(
-            "/secrets/{id}",
-            get(secrets::read_secret).delete(secrets::delete_secret),
-        )
+        .route("/secrets/{id}", get(secrets::read_secret).delete(secrets::delete_secret))
         .route("/uploads/init", post(uploads::upload_init))
         .route("/uploads/{id}/part-url", post(uploads::upload_part_url))
         .route("/uploads/{id}/complete", post(uploads::upload_complete))
@@ -216,8 +213,9 @@ async fn main() {
     if dist.join("index.html").exists() {
         let index_html = std::fs::read_to_string(dist.join("index.html"))
             .expect("readable frontend/dist/index.html");
-        app = app
-            .fallback_service(ServeDir::new(&dist).fallback(seo::SpaIndex(Arc::new(index_html))));
+        app = app.fallback_service(
+            ServeDir::new(&dist).fallback(seo::SpaIndex(Arc::new(index_html))),
+        );
         tracing::info!("serving static frontend from {static_dir}");
     } else {
         tracing::info!("no built frontend at {static_dir}; API only");
@@ -235,9 +233,9 @@ async fn main() {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown_signal())
-    .await
-    .unwrap();
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
 }
 
 async fn shutdown_signal() {

@@ -343,7 +343,10 @@ pub(crate) fn parse_admin_report_to(raw: &str) -> Option<String> {
     if trimmed.is_empty() {
         return None;
     }
-    let email = trimmed.strip_prefix("mailto:").unwrap_or(trimmed).trim();
+    let email = trimmed
+        .strip_prefix("mailto:")
+        .unwrap_or(trimmed)
+        .trim();
     if email.parse::<Mailbox>().is_ok() {
         return Some(email.to_string());
     }
@@ -387,12 +390,9 @@ pub(crate) async fn send_content_report(
     };
     crate::rate::enforce_email_limit(&state, &headers, ConnectInfo(peer))?;
 
-    let to: Mailbox = to_raw.parse().map_err(|_| {
-        err(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "reporting is not configured",
-        )
-    })?;
+    let to: Mailbox = to_raw
+        .parse()
+        .map_err(|_| err(StatusCode::INTERNAL_SERVER_ERROR, "reporting is not configured"))?;
 
     let view_url = req.view_url.trim();
     if view_url.len() > MAX_URL_LEN || !looks_like_share_url(view_url) {
