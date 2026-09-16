@@ -832,7 +832,7 @@ function VideoPlayer({ blob, filename }: { blob: Blob; filename?: string }) {
     <div className="flex flex-col items-center gap-3">
       {!failed ? (
         <video
-          className="max-h-[min(70vh,720px)] w-full rounded-[14px] bg-black"
+          className="max-h-[min(70vh,720px)] w-full max-w-full rounded-[14px] bg-black"
           controls
           playsInline
           preload="metadata"
