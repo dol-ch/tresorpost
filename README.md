@@ -326,8 +326,12 @@ cap.
 docker compose up --build
 ```
 
-The image is also published to GHCR on version tags (`v*`) via
-`.github/workflows/release.yml`.
+builds and runs the image from the local `Dockerfile`.
+
+A pre-built image is published to GHCR once a `vX.Y.Z` tag is pushed, via
+`.github/workflows/release.yml` — after that, `docker-compose.yml` can point
+at `ghcr.io/dol-ch/tresorpost:latest` (or a pinned version) instead of
+building locally.
 
 ## Branding / white-labeling
 
