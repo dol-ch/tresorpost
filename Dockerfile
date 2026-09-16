@@ -2,6 +2,8 @@
 
 # ── Frontend build ─────────────────────────────────
 FROM node:24-bookworm-slim AS frontend
+ARG COMMIT_HASH=""
+ENV VITE_COMMIT_HASH=$COMMIT_HASH
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci

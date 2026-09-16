@@ -188,6 +188,7 @@ export function App() {
 
   const Wordmark = brand.Wordmark;
   const sendActive = route.name === "create" || route.name === "view" || route.name === "delete";
+  const githubLink = brand.footerLinks.find((l) => isGitHubHost(l.href));
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
@@ -255,6 +256,26 @@ export function App() {
                   {isGitHubHost(l.href) ? t("footer.source") : l.label}
                 </a>
               ))}
+              {__COMMIT_HASH__ && (
+                githubLink ? (
+                  <a
+                    href={`${githubLink.href.replace(/\/+$/, "")}/commit/${__COMMIT_HASH__}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono text-xs opacity-75 hover:opacity-100"
+                    title={`Commit ${__COMMIT_HASH__}`}
+                  >
+                    #{__COMMIT_HASH__}
+                  </a>
+                ) : (
+                  <span
+                    className="font-mono text-xs opacity-75"
+                    title={`Commit ${__COMMIT_HASH__}`}
+                  >
+                    #{__COMMIT_HASH__}
+                  </span>
+                )
+              )}
             </span>
           </div>
           {brand.footerCredit && (

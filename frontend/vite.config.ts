@@ -1,8 +1,17 @@
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
+
+const commitHash = (() => {
+  try {
+    return execSync("git rev-parse --short=6 HEAD").toString().trim().slice(0, 6);
+  } catch {
+    return (process.env.VITE_COMMIT_HASH || "").slice(0, 6);
+  }
+})();
 
 /** If a private overlay ships its own tab icons or OG card, copy them into
  *  dist. The committed default is always the Tresorpost padlock / Inter card
@@ -29,6 +38,9 @@ function privateFaviconOverride(): Plugin {
 }
 
 export default defineConfig({
+  define: {
+    __COMMIT_HASH__: JSON.stringify(commitHash),
+  },
   plugins: [react(), tailwindcss(), privateFaviconOverride()],
   resolve: {
     alias: {
