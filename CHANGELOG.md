@@ -11,6 +11,12 @@ compatibility promise.
 Add entries here as you go, under `Added` / `Changed` / `Fixed` /
 `Security`, then fold them into a dated release section when you cut one.
 
+## [0.1.33] — 2026-09-17
+
+### Changed
+
+- Republish container images after GHCR packages were removed.
+
 ## [0.1.32] — 2026-09-17
 
 ### Added
