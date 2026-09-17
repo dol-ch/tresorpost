@@ -92,10 +92,10 @@ pub(crate) async fn create_secret(
     if req.expires_in < MIN_EXPIRES || req.expires_in > MAX_EXPIRES {
         return Err(err(StatusCode::BAD_REQUEST, "expires_in out of range"));
     }
-    if let Some(v) = req.max_views {
-        if v < 1 {
-            return Err(err(StatusCode::BAD_REQUEST, "max_views must be >= 1"));
-        }
+    if let Some(v) = req.max_views
+        && v < 1
+    {
+        return Err(err(StatusCode::BAD_REQUEST, "max_views must be >= 1"));
     }
 
     let now = now_secs();

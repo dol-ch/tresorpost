@@ -31,9 +31,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: cargo clippy
-        # Not -D warnings yet: the existing warning backlog needs a cleanup
-        # pass first. Tighten this once that lands.
-        run: cargo clippy --all-targets --all-features
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: cargo test
         run: cargo test --all-features
@@ -65,6 +63,9 @@ jobs:
 
       - name: npm ci
         run: npm ci
+
+      - name: npm run lint
+        run: npm run lint
 
       - name: npm run build
         run: npm run build
