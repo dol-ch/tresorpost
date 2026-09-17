@@ -88,10 +88,10 @@ pub(crate) async fn create_secret(
     if req.expires_in < MIN_EXPIRES || req.expires_in > MAX_EXPIRES {
         return Err(err(StatusCode::BAD_REQUEST, "expires_in out of range"));
     }
-    if let Some(v) = req.max_views {
-        if v < 1 {
-            return Err(err(StatusCode::BAD_REQUEST, "max_views must be >= 1"));
-        }
+    if let Some(v) = req.max_views
+        && v < 1
+    {
+        return Err(err(StatusCode::BAD_REQUEST, "max_views must be >= 1"));
     }
 
     let now = now_secs();
@@ -173,9 +173,7 @@ pub(crate) async fn read_secret(
     crate::rate::enforce_read_limit(&state, &headers, ConnectInfo(peer))?;
     let now = now_secs();
 
-    // Atomically claim one view. The row is only returned if it still exists,
-    // has not expired, is ready (fully uploaded), and has views remaining. This
-    // closes the race where two readers could both fetch the "last" view.
+    // Atomic claim closes the race where two readers both fetch the "last" view.
     let row = sqlx::query(
         "UPDATE secrets SET views = views + 1 \
          WHERE id = ? AND expires_at > ? AND status = 'ready' \
@@ -223,9 +221,7 @@ pub(crate) async fn read_secret(
             err(StatusCode::INTERNAL_SERVER_ERROR, "storage error")
         })?;
 
-        // Burn: later GETs already 404 via the view-count guard. Keep the row
-        // and set purge_after so the sweeper deletes the object after the
-        // presigned URL expires — survives process restart, unlike spawn+sleep.
+        // purge_after lets the sweeper reap this after the URL expires, surviving a restart.
         if burning {
             let purge_after = now.saturating_add(s3.url_ttl.as_secs() as i64);
             let _ = sqlx::query("UPDATE secrets SET purge_after = ? WHERE id = ?")

@@ -48,9 +48,7 @@ impl S3Backend {
             .ok()
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "us-east-1".to_string());
-        // Path-style addressing (bucket in the path) is required by MinIO and
-        // convenient for many self-hosted gateways. Virtual-hosted style is the
-        // default for AWS.
+        // Required by MinIO and most self-hosted gateways; AWS defaults to virtual-hosted style.
         let force_path_style = std::env::var("S3_FORCE_PATH_STYLE")
             .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
             .unwrap_or(false);
@@ -287,10 +285,7 @@ mod tests {
 
     #[test]
     fn random_key_is_unpredictable() {
-        // Object keys are the only thing standing between "list the bucket"
-        // and "read someone else's file" for anyone without the encryption
-        // key. 200 draws should never collide and should not repeat a
-        // predictable pattern.
+        // Unguessable keys are the only thing standing between "list the bucket" and reading someone else's file.
         let keys: HashSet<String> = (0..200).map(|_| S3Backend::random_key()).collect();
         assert_eq!(
             keys.len(),
@@ -311,9 +306,7 @@ mod tests {
 
     #[test]
     fn is_missing_rejects_other_errors() {
-        // A real failure (e.g. AccessDenied, InternalError) must NOT be
-        // swallowed as "already gone" — the sweeper/delete path would
-        // silently drop a row while the object is still live in the bucket.
+        // A real failure must not be swallowed as "already gone", or the sweeper drops a live row.
         for code in ["AccessDenied", "InternalError", "SlowDown", ""] {
             assert!(
                 !is_missing(&meta_with_code(code)),

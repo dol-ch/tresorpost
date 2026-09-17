@@ -100,10 +100,10 @@ async fn remove_s3_payload(
         return true;
     };
     let mut ok = true;
-    if status == "pending" {
-        if let Some(uid) = upload_id {
-            ok = s3.abort_multipart(key, uid).await;
-        }
+    if status == "pending"
+        && let Some(uid) = upload_id
+    {
+        ok = s3.abort_multipart(key, uid).await;
     }
     ok && s3.delete_object(key).await
 }
@@ -224,10 +224,10 @@ pub(crate) async fn cleanup_loop(pool: SqlitePool, s3: Option<S3Backend>, pendin
             bump(&pool, "expired_total", n as i64).await;
             tracing::info!("purged {n} expired secrets");
         }
-        if ticks % ORPHAN_REAP_EVERY_N == 0 {
-            if let Some(s3) = s3.as_ref() {
-                let _ = reap_orphan_objects(&pool, s3).await;
-            }
+        if ticks.is_multiple_of(ORPHAN_REAP_EVERY_N)
+            && let Some(s3) = s3.as_ref()
+        {
+            let _ = reap_orphan_objects(&pool, s3).await;
         }
     }
 }

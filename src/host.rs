@@ -79,10 +79,9 @@ fn request_host(headers: &HeaderMap) -> Option<String> {
     if let Some(xfh) = headers
         .get("x-forwarded-host")
         .and_then(|v| v.to_str().ok())
+        && let Some(h) = normalize_host(xfh.split(',').next().unwrap_or(xfh).trim())
     {
-        if let Some(h) = normalize_host(xfh.split(',').next().unwrap_or(xfh).trim()) {
-            return Some(h);
-        }
+        return Some(h);
     }
     headers
         .get(header::HOST)

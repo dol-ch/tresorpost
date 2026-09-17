@@ -1,7 +1,5 @@
-// Large-file (S3-backed) upload and download with client-side chunked streaming
-// AEAD. The plaintext is never held in memory in full: it is sliced into fixed
-// chunks that are encrypted one at a time on upload, and decrypted one at a
-// time (streamed straight to disk when possible) on download.
+// Large-file (S3-backed) upload/download via client-side chunked streaming
+// AEAD; plaintext is never held in memory in full.
 
 import {
   generateKey,
@@ -52,9 +50,7 @@ function putPart(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
-    // The encrypted chunk carries a Poly1305 tag; report progress against the
-    // (larger) ciphertext but scale it into the plaintext total for a smooth,
-    // byte-accurate bar.
+    // Ciphertext is larger than plaintext (Poly1305 tag); scale progress to the plaintext total.
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
         const frac = e.total > 0 ? e.loaded / e.total : 0;

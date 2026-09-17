@@ -131,7 +131,7 @@ pub(crate) async fn send_share_email(
     }
 
     let expires_in = req.expires_in.clamp(MIN_EXPIRES, MAX_EXPIRES);
-    let max_views = req.max_views.filter(|&n| n >= 1 && n <= 1_000_000);
+    let max_views = req.max_views.filter(|&n| (1..=1_000_000).contains(&n));
     let body = email_body(url, expires_in, max_views);
 
     if let Err(e) = mailer.send(to, SUBJECT, body).await {
@@ -199,14 +199,14 @@ fn percent_decode(s: &str) -> String {
     let b = s.as_bytes();
     let mut i = 0;
     while i < b.len() {
-        if b[i] == b'%' && i + 2 < b.len() {
-            if let Ok(c) =
+        if b[i] == b'%'
+            && i + 2 < b.len()
+            && let Ok(c) =
                 u8::from_str_radix(std::str::from_utf8(&b[i + 1..i + 3]).unwrap_or(""), 16)
-            {
-                out.push(c as char);
-                i += 3;
-                continue;
-            }
+        {
+            out.push(c as char);
+            i += 3;
+            continue;
         }
         out.push(b[i] as char);
         i += 1;
@@ -268,16 +268,16 @@ fn allowed_hosts(headers: &HeaderMap) -> Vec<String> {
             } else {
                 Some(h)
             }
-        }) {
-            if !is_loopback_host(&h) && !out.contains(&h) {
-                out.push(h);
-            }
+        }) && !is_loopback_host(&h)
+            && !out.contains(&h)
+        {
+            out.push(h);
         }
     };
-    if let Some(explicit) = std::env::var("PUBLIC_URL").ok() {
+    if let Ok(explicit) = std::env::var("PUBLIC_URL") {
         push(&mut out, explicit.trim());
     }
-    if let Some(short) = std::env::var("SHORT_DOMAIN").ok() {
+    if let Ok(short) = std::env::var("SHORT_DOMAIN") {
         push(&mut out, short.trim());
     }
     if let Some(origin) = headers.get("origin").and_then(|v| v.to_str().ok()) {

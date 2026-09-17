@@ -295,17 +295,16 @@ pub(crate) fn client_ip(headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
         .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "yes"))
         .unwrap_or(false);
     if trust {
-        if let Some(xff) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
-            if let Some(first) = xff.split(',').next() {
-                if let Ok(ip) = first.trim().parse::<IpAddr>() {
-                    return ip;
-                }
-            }
+        if let Some(xff) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok())
+            && let Some(first) = xff.split(',').next()
+            && let Ok(ip) = first.trim().parse::<IpAddr>()
+        {
+            return ip;
         }
-        if let Some(real) = headers.get("x-real-ip").and_then(|v| v.to_str().ok()) {
-            if let Ok(ip) = real.trim().parse::<IpAddr>() {
-                return ip;
-            }
+        if let Some(real) = headers.get("x-real-ip").and_then(|v| v.to_str().ok())
+            && let Ok(ip) = real.trim().parse::<IpAddr>()
+        {
+            return ip;
         }
     }
     peer.ip()
@@ -404,10 +403,7 @@ mod tests {
         }
     }
 
-    // `TRUST_PROXY` is read from the process environment inside `client_ip`,
-    // so these tests serialize on a lock and always restore the var
-    // afterwards to avoid bleeding state into unrelated tests running in
-    // parallel in this binary.
+    // Serializes tests that mutate the process-wide TRUST_PROXY env var.
     static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     fn with_trust_proxy<T>(value: Option<&str>, f: impl FnOnce() -> T) -> T {

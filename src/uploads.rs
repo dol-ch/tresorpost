@@ -62,10 +62,10 @@ pub(crate) async fn upload_init(
     if req.expires_in < MIN_EXPIRES || req.expires_in > MAX_EXPIRES {
         return Err(err(StatusCode::BAD_REQUEST, "expires_in out of range"));
     }
-    if let Some(v) = req.max_views {
-        if v < 1 {
-            return Err(err(StatusCode::BAD_REQUEST, "max_views must be >= 1"));
-        }
+    if let Some(v) = req.max_views
+        && v < 1
+    {
+        return Err(err(StatusCode::BAD_REQUEST, "max_views must be >= 1"));
     }
     if req.total_size <= 0 || req.total_size > s3.max_file_bytes {
         return Err(err(StatusCode::PAYLOAD_TOO_LARGE, "file too large"));
@@ -537,9 +537,7 @@ mod tests {
 
     #[tokio::test]
     async fn pending_upload_ignores_ready_rows() {
-        // A completed upload has already flipped `status` to 'ready' — the
-        // part-url/complete endpoints must not resume writing to a finished
-        // object.
+        // Must not resume writing to an upload already flipped to 'ready'.
         let (state, dir) = test_state(None).await;
         sqlx::query(
             "INSERT INTO secrets (id, ciphertext, nonce, created_at, expires_at, views, kind, size, storage, status, s3_key, upload_id) \
