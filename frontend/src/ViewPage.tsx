@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { EmptyState, SelfDestructCard } from "@/components/kit";
+import { EmptyState, SelfDestructCard, CreateNewSecretButton } from "@/components/kit";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -326,9 +326,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
             <AlertTitle>{t("view.error")}</AlertTitle>
             <AlertDescription>{status.message}</AlertDescription>
           </Alert>
-          <Button variant="secondary" asChild>
-            <a href="/">{t("view.goHome")}</a>
-          </Button>
+          <CreateNewSecretButton />
         </CardContent>
       </Card>
     );
@@ -389,6 +387,7 @@ export function ViewPage({ id, keyB64Url, recipientDeleteToken }: Props) {
           />
         )}
         {payload.kind === "file" && <FileDownload payload={payload} />}
+        <CreateNewSecretButton className="mt-1" />
       </CardContent>
     </Card>
   );
@@ -567,6 +566,7 @@ function S3FileView({
             {t("create.cancel")}
           </Button>
         )}
+        {phase !== "downloading" && <CreateNewSecretButton className="mt-1" />}
 
       </CardContent>
     </Card>

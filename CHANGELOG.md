@@ -11,6 +11,12 @@ compatibility promise.
 Add entries here as you go, under `Added` / `Changed` / `Fixed` /
 `Security`, then fold them into a dated release section when you cut one.
 
+## [0.1.34] — 2026-09-17
+
+### Added
+
+- "Create a new secret" button under decrypted notes, files, and view errors.
+
 ## [0.1.33] — 2026-09-17
 
 ### Changed
