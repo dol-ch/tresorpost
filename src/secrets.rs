@@ -370,7 +370,12 @@ mod tests {
         .unwrap();
         assert!(json.get("short_origin").is_none());
         assert!(json.get("public_origin").is_none());
-        let mut keys: Vec<&str> = json.as_object().unwrap().keys().map(|k| k.as_str()).collect();
+        let mut keys: Vec<&str> = json
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(|k| k.as_str())
+            .collect();
         keys.sort();
         assert_eq!(
             keys,
