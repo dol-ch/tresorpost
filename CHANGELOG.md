@@ -13,9 +13,9 @@ Add entries here as you go, under `Added` / `Changed` / `Fixed` /
 
 ### Changed
 
-- Share and delete URLs are minted on `PUBLIC_URL` (the current canonical
-  domain). `SHORT_DOMAIN` still 301s old short links; it is not used for
-  new ones.
+- Share and delete URLs are minted on the host you are browsing (e.g.
+  `secret.dol.ch` or `tresorpost.ch`), not `SHORT_DOMAIN` and not a forced
+  `PUBLIC_URL`. `SHORT_DOMAIN` still 301s leftover short links.
 
 ## [0.1.34] — 2026-09-17
 

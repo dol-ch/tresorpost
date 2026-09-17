@@ -65,13 +65,11 @@ export interface AppConfig {
   email_enabled?: boolean;
   /** When true, view pages show Report (SMTP + ADMIN_REPORT_URL). */
   report_enabled?: boolean;
-  /** Canonical origin (`PUBLIC_URL`) used for minted share/delete links. */
-  public_origin?: string;
 }
 
-/** Origin for `#/v` and `#/d` URLs: `PUBLIC_URL` when set, else the page origin. */
-export function shareLinkOrigin(cfg: Pick<AppConfig, "public_origin">, pageOrigin: string): string {
-  return (cfg.public_origin || pageOrigin).replace(/\/$/, "");
+/** Origin for `#/v` and `#/d` URLs: the host the user is on, never a configured short/canonical rewrite. */
+export function shareLinkOrigin(pageOrigin: string): string {
+  return pageOrigin.replace(/\/$/, "");
 }
 
 export async function fetchConfig(): Promise<AppConfig> {

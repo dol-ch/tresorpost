@@ -98,7 +98,7 @@ export function CreatePage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
-  const [shareOrigin, setShareOrigin] = useState(() => window.location.origin);
+  const shareOrigin = shareLinkOrigin(window.location.origin);
 
   const editorRef = useRef<EditorHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,7 +125,6 @@ export function CreatePage() {
         setS3Enabled(cfg.s3_enabled);
         setMaxS3FileBytes(cfg.max_s3_file_bytes);
         setEmailEnabled(Boolean(cfg.email_enabled));
-        setShareOrigin(shareLinkOrigin(cfg, window.location.origin));
       })
       .catch(() => {
         /* keep the default limit if config is unavailable */
