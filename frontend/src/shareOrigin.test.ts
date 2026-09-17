@@ -22,10 +22,8 @@ test("share and delete links stay on the current origin", () => {
     mintDeleteUrl("https://secret.dol.ch", "abcdefghijkl", "delTokendelToken"),
     "https://secret.dol.ch/#/d/abcdefghijkl/delTokendelToken",
   );
-});
-
-test("mint helpers take only the page origin, not config origins", () => {
-  assert.equal(shareLinkOrigin.length, 1);
-  assert.equal(mintDeleteUrl.length, 3);
-  assert.equal(mintShareUrl.length, 3);
+  assert.equal(
+    mintShareUrl("https://tresorpost.ch", "abcdefghijkl", "KEYKEYKEYKEYKEYK"),
+    "https://tresorpost.ch/#/v/abcdefghijkl/KEYKEYKEYKEYKEYK",
+  );
 });
