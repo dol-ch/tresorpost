@@ -20,12 +20,6 @@ pub(crate) fn short_domain_host() -> Option<String> {
     host_from_env("SHORT_DOMAIN")
 }
 
-/// Origin used when minting share links, e.g. `https://tpst.ch`.
-pub(crate) fn share_origin() -> Option<String> {
-    let host = short_domain_host()?;
-    Some(format!("https://{host}"))
-}
-
 fn origin_from_env(var: &str) -> Option<String> {
     let raw = std::env::var(var).ok()?;
     let raw = raw.trim();

@@ -11,6 +11,12 @@ compatibility promise.
 Add entries here as you go, under `Added` / `Changed` / `Fixed` /
 `Security`, then fold them into a dated release section when you cut one.
 
+### Changed
+
+- Share and delete URLs are minted on `PUBLIC_URL` (the current canonical
+  domain). `SHORT_DOMAIN` still 301s old short links; it is not used for
+  new ones.
+
 ## [0.1.34] — 2026-09-17
 
 ### Added

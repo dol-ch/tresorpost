@@ -125,8 +125,8 @@ export function CreatePage() {
         setS3Enabled(cfg.s3_enabled);
         setMaxS3FileBytes(cfg.max_s3_file_bytes);
         setEmailEnabled(Boolean(cfg.email_enabled));
-        if (cfg.short_origin) {
-          setShareOrigin(cfg.short_origin.replace(/\/$/, ""));
+        if (cfg.public_origin) {
+          setShareOrigin(cfg.public_origin.replace(/\/$/, ""));
         }
       })
       .catch(() => {

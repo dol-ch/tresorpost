@@ -65,8 +65,8 @@ export interface AppConfig {
   email_enabled?: boolean;
   /** When true, view pages show Report (SMTP + ADMIN_REPORT_URL). */
   report_enabled?: boolean;
-  /** `https://SHORT_DOMAIN` when the server mints short share links. */
-  short_origin?: string;
+  /** Canonical origin (`PUBLIC_URL`) used for minted share/delete links. */
+  public_origin?: string;
 }
 
 export async function fetchConfig(): Promise<AppConfig> {
