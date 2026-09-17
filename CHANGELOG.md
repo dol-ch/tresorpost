@@ -13,6 +13,10 @@ Add entries here as you go, under `Added` / `Changed` / `Fixed` /
 
 ## [0.1.35] — 2026-09-17
 
+### Added
+
+- Download a decrypted text note as a Markdown (`.md`) file.
+
 ### Changed
 
 - Share and delete URLs are minted on the host you are browsing (e.g.

@@ -112,6 +112,7 @@ export const en: Record<MessageKey, string> = {
   "view.tooLargeOpen":
     "This file is {size} — too large to open in the browser. Download it instead.",
   "view.download": "Download",
+  "view.downloadMd": "Download as .md",
   "view.decryptedLocal": "Decrypted locally",
   "view.decryptedInBrowser": "decrypted in your browser",
   "view.readyPlay": "Ready to play",

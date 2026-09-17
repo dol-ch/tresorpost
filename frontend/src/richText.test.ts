@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { EditorState, TextSelection } from "prosemirror-state";
 import { wrapIn } from "prosemirror-commands";
 import { wrapInList, liftListItem } from "prosemirror-schema-list";
-import { docToHTML, editorSchema } from "./richText.ts";
+import { docToHTML, docToMarkdown, editorSchema } from "./richText.ts";
 
 function apply(
   cmd: (
@@ -62,6 +62,54 @@ test("liftListItem unwraps an ordered list back to a paragraph", () => {
   state = apply(liftListItem(editorSchema.nodes.list_item), state);
   assert.equal(state.doc.child(0).type.name, "paragraph");
   assert.equal(docToHTML(state.doc), "<p>one</p>");
+});
+
+test("docToMarkdown serializes headings, emphasis, lists, and code", () => {
+  const schema = editorSchema;
+  const doc = schema.node("doc", null, [
+    schema.node("heading", { level: 2 }, [schema.text("Title")]),
+    schema.node("paragraph", null, [
+      schema.text("hello "),
+      schema.text("bold", [schema.marks.strong.create()]),
+      schema.text(" and "),
+      schema.text("em", [schema.marks.em.create()]),
+    ]),
+    schema.node("bullet_list", null, [
+      schema.node("list_item", null, [
+        schema.node("paragraph", null, [schema.text("one")]),
+      ]),
+      schema.node("list_item", null, [
+        schema.node("paragraph", null, [schema.text("two")]),
+      ]),
+    ]),
+    schema.node("code_block", null, [schema.text("const x = 1;")]),
+  ]);
+  assert.equal(
+    docToMarkdown(doc),
+    "## Title\n\nhello **bold** and *em*\n\n- one\n- two\n\n```\nconst x = 1;\n```\n",
+  );
+});
+
+test("docToMarkdown serializes links and ordered lists", () => {
+  const schema = editorSchema;
+  const doc = schema.node("doc", null, [
+    schema.node("paragraph", null, [
+      schema.text("see ", []),
+      schema.text("here", [schema.marks.link.create({ href: "https://example.com" })]),
+    ]),
+    schema.node("ordered_list", null, [
+      schema.node("list_item", null, [
+        schema.node("paragraph", null, [schema.text("alpha")]),
+      ]),
+      schema.node("list_item", null, [
+        schema.node("paragraph", null, [schema.text("beta")]),
+      ]),
+    ]),
+  ]);
+  assert.equal(
+    docToMarkdown(doc),
+    "see [here](https://example.com)\n\n1. alpha\n2. beta\n",
+  );
 });
 
 test("setNodeMarkup converts a bullet list to an ordered list", () => {
