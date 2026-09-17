@@ -98,6 +98,7 @@ export const en: Record<MessageKey, string> = {
   "view.destroyedBody":
     "The ciphertext has been wiped from the server. Anyone opening the link from now on will see nothing.",
   "view.createAnother": "Create another note",
+  "view.createNew": "Create a new secret",
   "view.couldNotOpen": "Could not open",
   "view.error": "Error",
   "view.goHome": "Go home",
