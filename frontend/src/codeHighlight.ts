@@ -1,9 +1,6 @@
-// Live syntax highlighting for ProseMirror `code_block` nodes.
-//
-// lowlight returns a hast tree whose concatenated text exactly matches the code
-// block's text, so we can walk it while tracking the character offset and emit
-// inline decorations (hljs-* classes) at the right positions. Highlighting is
-// purely a view concern — it never changes the stored document/HTML.
+// Live syntax highlighting for ProseMirror `code_block` nodes. lowlight's hast
+// tree text matches the block exactly, so we walk it by character offset to
+// emit inline decorations — a view concern only, never touching stored HTML.
 
 import { Plugin } from "prosemirror-state";
 import type { Node as PMNode } from "prosemirror-model";

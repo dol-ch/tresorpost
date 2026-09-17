@@ -1,12 +1,8 @@
-// Client-side end-to-end encryption.
-//
-// We use XChaCha20-Poly1305 with a 256-bit key. Symmetric ciphers with 256-bit
-// keys are considered quantum-safe / quantum-resistant: the best known quantum
-// attack (Grover's algorithm) only halves the effective key strength, leaving
-// ~128 bits of security — comfortably beyond reach. The key is generated in the browser and
-// never sent to the server; it is placed in the URL fragment (after `#`), which
-// browsers do not transmit in HTTP requests. The server therefore only ever
-// stores opaque ciphertext and can never decrypt it.
+// Client-side end-to-end encryption: XChaCha20-Poly1305, 256-bit key (quantum-safe —
+// Grover's algorithm only halves the effective strength, leaving ~128 bits).
+// The key is generated in the browser and lives only in the URL fragment
+// (after `#`), which browsers never send to the server, so the server only
+// ever sees opaque ciphertext.
 
 import { xchacha20poly1305 } from "@noble/ciphers/chacha.js";
 
@@ -49,17 +45,9 @@ export function decryptBytes(
 }
 
 // ---- chunked streaming AEAD (large S3-backed files) ------------------------
-//
-// A multi-GB file is never held in memory in full. It is split into fixed
-// plaintext chunks; each chunk is sealed independently with XChaCha20-Poly1305
-// under a unique nonce and authenticated with associated data (AAD) that binds
-// the chunk's index and whether it is the final chunk. This prevents an
-// attacker (or the untrusted storage) from reordering, dropping or truncating
-// chunks without detection.
-//
-// Nonce = 20-byte random base prefix || 4-byte big-endian counter (24 bytes
-// total, the XChaCha extended-nonce size). AAD = 4-byte big-endian counter ||
-// 1 final-flag byte.
+// Fixed plaintext chunks, each sealed independently. AAD binds the chunk
+// index and a final-flag byte, so reordering/dropping/truncation is detected.
+// Nonce = 20-byte random base prefix || 4-byte big-endian counter.
 
 export const STREAM_VERSION = 1;
 /** Base nonce prefix length; the remaining 4 bytes are the chunk counter. */

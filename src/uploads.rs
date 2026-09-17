@@ -537,9 +537,7 @@ mod tests {
 
     #[tokio::test]
     async fn pending_upload_ignores_ready_rows() {
-        // A completed upload has already flipped `status` to 'ready' — the
-        // part-url/complete endpoints must not resume writing to a finished
-        // object.
+        // Must not resume writing to an upload already flipped to 'ready'.
         let (state, dir) = test_state(None).await;
         sqlx::query(
             "INSERT INTO secrets (id, ciphertext, nonce, created_at, expires_at, views, kind, size, storage, status, s3_key, upload_id) \

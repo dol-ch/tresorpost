@@ -1,6 +1,5 @@
-// The plaintext object that gets encrypted. Everything here — including the
-// content kind, filename and MIME type — is inside the encrypted blob, so the
-// server learns nothing about what is being shared.
+// The plaintext object that gets encrypted — kind, filename and MIME type
+// included, so the server learns nothing about what's being shared.
 
 import {
   bytesToBase64,

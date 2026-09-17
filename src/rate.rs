@@ -403,10 +403,7 @@ mod tests {
         }
     }
 
-    // `TRUST_PROXY` is read from the process environment inside `client_ip`,
-    // so these tests serialize on a lock and always restore the var
-    // afterwards to avoid bleeding state into unrelated tests running in
-    // parallel in this binary.
+    // Serializes tests that mutate the process-wide TRUST_PROXY env var.
     static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     fn with_trust_proxy<T>(value: Option<&str>, f: impl FnOnce() -> T) -> T {
