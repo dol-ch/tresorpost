@@ -14,7 +14,7 @@ import {
   type SecretKind,
   type SecretPayload,
 } from "./payload";
-import { createSecret, fetchConfig, sendShareEmail, shareLinkOrigin } from "./api";
+import { createSecret, fetchConfig, mintDeleteUrl, mintShareUrl, sendShareEmail } from "./api";
 import { uploadLargeFile } from "./largeFile";
 import { EXPIRY_OPTIONS, MAX_FILE_BYTES, humanSize, uploadMaxBytes } from "./options";
 import { copyText } from "./clipboard";
@@ -98,8 +98,6 @@ export function CreatePage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
-  const shareOrigin = shareLinkOrigin(window.location.origin);
-
   const editorRef = useRef<EditorHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [composeDrag, setComposeDrag] = useState(false);
@@ -237,13 +235,12 @@ export function CreatePage() {
       }
 
       const keyUrl = bytesToBase64Url(key);
-      const url = recipientDeleteToken
-        ? `${shareOrigin}/#/v/${id}/${keyUrl}/${recipientDeleteToken}`
-        : `${shareOrigin}/#/v/${id}/${keyUrl}`;
-      setShareUrl(url);
+      setShareUrl(
+        mintShareUrl(window.location.origin, id, keyUrl, recipientDeleteToken),
+      );
       setDeleteUrl(
         deleteToken
-          ? `${shareOrigin}/#/d/${id}/${deleteToken}`
+          ? mintDeleteUrl(window.location.origin, id, deleteToken)
           : null,
       );
     } catch (e) {

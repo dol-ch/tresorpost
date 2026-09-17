@@ -374,5 +374,16 @@ mod tests {
         .unwrap();
         assert!(json.get("short_origin").is_none());
         assert!(json.get("public_origin").is_none());
+        let keys: Vec<&str> = json.as_object().unwrap().keys().map(|k| k.as_str()).collect();
+        assert_eq!(
+            keys,
+            [
+                "max_file_bytes",
+                "s3_enabled",
+                "max_s3_file_bytes",
+                "email_enabled",
+                "report_enabled"
+            ]
+        );
     }
 }
