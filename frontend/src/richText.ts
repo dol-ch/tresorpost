@@ -123,6 +123,110 @@ export function docToHTML(doc: PMNode): string {
   return html;
 }
 
+function escapeMd(text: string): string {
+  return text.replace(/([\\`*_[\]#])/g, "\\$1");
+}
+
+function inlineMarkdown(node: PMNode): string {
+  if (node.type.name === "hard_break") return "  \n";
+  if (node.isText) {
+    const names = new Set(node.marks.map((m) => m.type.name));
+    let out = node.text ?? "";
+    if (names.has("code")) {
+      out = "`" + out.replace(/`/g, "\\`") + "`";
+    } else {
+      out = escapeMd(out);
+      if (names.has("strong")) out = `**${out}**`;
+      if (names.has("em")) out = `*${out}*`;
+      const link = node.marks.find((m) => m.type.name === "link");
+      if (link?.attrs.href) out = `[${out}](${link.attrs.href})`;
+    }
+    return out;
+  }
+  let inner = "";
+  node.forEach((child) => {
+    inner += inlineMarkdown(child);
+  });
+  return inner;
+}
+
+function indentBlock(text: string, prefix: string): string {
+  return text
+    .split("\n")
+    .map((line, i) => (i === 0 ? prefix + line : "  " + line))
+    .join("\n");
+}
+
+function blockMarkdown(node: PMNode): string {
+  switch (node.type.name) {
+    case "paragraph":
+      return inlineMarkdown(node);
+    case "heading": {
+      const level = Math.min(6, Math.max(1, Number(node.attrs.level) || 1));
+      return `${"#".repeat(level)} ${inlineMarkdown(node)}`;
+    }
+    case "code_block":
+      return "```\n" + node.textContent + "\n```";
+    case "blockquote": {
+      const inner = blocksMarkdown(node);
+      return inner
+        .split("\n")
+        .map((line) => (line.length ? `> ${line}` : ">"))
+        .join("\n");
+    }
+    case "horizontal_rule":
+      return "---";
+    case "bullet_list": {
+      const items: string[] = [];
+      node.forEach((item) => {
+        items.push(indentBlock(blocksMarkdown(item), "- "));
+      });
+      return items.join("\n");
+    }
+    case "ordered_list": {
+      let i = Number(node.attrs.order) || 1;
+      const items: string[] = [];
+      node.forEach((item) => {
+        items.push(indentBlock(blocksMarkdown(item), `${i}. `));
+        i += 1;
+      });
+      return items.join("\n");
+    }
+    case "list_item":
+      return blocksMarkdown(node);
+    default:
+      return node.isLeaf ? "" : blocksMarkdown(node);
+  }
+}
+
+function blocksMarkdown(parent: PMNode): string {
+  const parts: string[] = [];
+  parent.forEach((child) => {
+    const chunk = blockMarkdown(child);
+    if (chunk) parts.push(chunk);
+  });
+  const tight = parent.type.name === "list_item";
+  return parts.join(tight ? "\n" : "\n\n");
+}
+
+/** Schema-faithful Markdown for downloading a decrypted text note. */
+export function docToMarkdown(doc: PMNode): string {
+  const md = blocksMarkdown(doc).trim();
+  return md ? md + "\n" : "";
+}
+
+export const TEXT_NOTE_MARKDOWN_FILENAME = "tresorpost-note.md";
+
+/** Convert stored rich-text HTML to Markdown. Needs a DOM (decrypt view). */
+export function htmlToMarkdown(html: string): string {
+  if (typeof document === "undefined") return "";
+  try {
+    return docToMarkdown(htmlToDoc(html));
+  } catch {
+    return "";
+  }
+}
+
 export function htmlToDoc(html: string): PMNode {
   const parser = PMDOMParser.fromSchema(editorSchema);
   const wrap = document.createElement("div");

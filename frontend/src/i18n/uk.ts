@@ -112,6 +112,7 @@ export const uk: Record<MessageKey, string> = {
   "view.tooLargeOpen":
     "Файл {size} — завеликий, щоб відкрити в браузері. Завантаж його.",
   "view.download": "Завантажити",
+  "view.downloadMd": "Завантажити як .md",
   "view.decryptedLocal": "Розшифровано локально",
   "view.decryptedInBrowser": "розшифровано в браузері",
   "view.readyPlay": "Готово до відтворення",

@@ -65,8 +65,28 @@ export interface AppConfig {
   email_enabled?: boolean;
   /** When true, view pages show Report (SMTP + ADMIN_REPORT_URL). */
   report_enabled?: boolean;
-  /** `https://SHORT_DOMAIN` when the server mints short share links. */
-  short_origin?: string;
+}
+
+/** Origin for `#/v` and `#/d` URLs: the host the user is on.
+ *  Configured canonical/short hosts are never inputs here. */
+export function shareLinkOrigin(pageOrigin: string): string {
+  return pageOrigin.replace(/\/$/, "");
+}
+
+export function mintShareUrl(
+  pageOrigin: string,
+  id: string,
+  keyUrl: string,
+  recipientDeleteToken?: string,
+): string {
+  const origin = shareLinkOrigin(pageOrigin);
+  return recipientDeleteToken
+    ? `${origin}/#/v/${id}/${keyUrl}/${recipientDeleteToken}`
+    : `${origin}/#/v/${id}/${keyUrl}`;
+}
+
+export function mintDeleteUrl(pageOrigin: string, id: string, deleteToken: string): string {
+  return `${shareLinkOrigin(pageOrigin)}/#/d/${id}/${deleteToken}`;
 }
 
 export async function fetchConfig(): Promise<AppConfig> {

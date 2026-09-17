@@ -31,9 +31,6 @@ pub(crate) struct ConfigResp {
     email_enabled: bool,
     /// When true, view pages may send an abuse report to `ADMIN_REPORT_URL`.
     report_enabled: bool,
-    /// When set, the UI mints share/delete URLs on this origin (`https://SHORT_DOMAIN`).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    short_origin: Option<String>,
 }
 
 pub(crate) async fn config(State(state): State<AppState>) -> Json<ConfigResp> {
@@ -43,7 +40,6 @@ pub(crate) async fn config(State(state): State<AppState>) -> Json<ConfigResp> {
         max_s3_file_bytes: state.s3.as_ref().map(|s| s.max_file_bytes).unwrap_or(0),
         email_enabled: state.mailer.is_some(),
         report_enabled: state.mailer.is_some() && state.admin_report_to.is_some(),
-        short_origin: crate::host::share_origin(),
     })
 }
 
@@ -360,5 +356,36 @@ mod tests {
         let s = json.to_string();
         assert!(!s.contains("ciphertext"));
         assert!(!s.contains("admin"));
+    }
+
+    #[test]
+    fn config_does_not_override_share_link_origin() {
+        let json = serde_json::to_value(&ConfigResp {
+            max_file_bytes: 1,
+            s3_enabled: false,
+            max_s3_file_bytes: 0,
+            email_enabled: false,
+            report_enabled: false,
+        })
+        .unwrap();
+        assert!(json.get("short_origin").is_none());
+        assert!(json.get("public_origin").is_none());
+        let mut keys: Vec<&str> = json
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(|k| k.as_str())
+            .collect();
+        keys.sort();
+        assert_eq!(
+            keys,
+            [
+                "email_enabled",
+                "max_file_bytes",
+                "max_s3_file_bytes",
+                "report_enabled",
+                "s3_enabled"
+            ]
+        );
     }
 }

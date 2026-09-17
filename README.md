@@ -221,8 +221,8 @@ if present (copy `.env.example` to `.env`):
 | `SMTP_USERNAME`           | _(unset)_      | SMTP user (`MAILGUN_SMTP_LOGIN` also works). Empty = email UI off. |
 | `SMTP_PASSWORD`           | _(unset)_      | SMTP password (`MAILGUN_SMTP_PASSWORD` also works).            |
 | `SMTP_FROM`               | _(unset)_      | From mailbox, e.g. `Tresorpost <noreply@mg.example.com>`.      |
-| `PUBLIC_URL`              | _(unset)_      | Canonical origin (`https://tresorpost.ch`). Target of `SHORT_DOMAIN` redirects, share emails must use this host. |
-| `SHORT_DOMAIN`            | _(unset)_      | Short host (`tpst.ch`). Any request on that host 301s to `PUBLIC_URL` (path + query copied, `#` kept by the browser). Share/delete links are minted on `https://SHORT_DOMAIN`. |
+| `PUBLIC_URL`              | _(unset)_      | Canonical origin (`https://tresorpost.ch`). Target of `SHORT_DOMAIN` 301s only. Share/delete links (`#/v`, `#/d`) always use the current browser origin, not this value. |
+| `SHORT_DOMAIN`            | _(unset)_      | Optional legacy short host (`tpst.ch`). Requests on that host 301 to `PUBLIC_URL` (path + query copied, `#` kept by the browser). New links are not minted on this host. |
 | `EMAIL_RATE_LIMIT`        | `3`            | Max share emails / content reports per IP per window. `0` disables. |
 | `EMAIL_RATE_WINDOW_SECS`  | `60`           | Share-email / report rate-limit window (default 1 minute).     |
 | `ADMIN_REPORT_URL`        | _(unset)_      | Mailbox that receives abuse reports (`reports@…`, `mailto:…`, or `Name <email>`). Needs SMTP. Hides the Report button when unset. |

@@ -111,6 +111,7 @@ export const de = {
   "view.tooLargeOpen":
     "Diese Datei ist {size} — zu gross für den Browser. Stattdessen herunterladen.",
   "view.download": "Download",
+  "view.downloadMd": "Als .md herunterladen",
   "view.decryptedLocal": "Lokal entschlüsselt",
   "view.decryptedInBrowser": "im Browser entschlüsselt",
   "view.readyPlay": "Bereit zum Abspielen",

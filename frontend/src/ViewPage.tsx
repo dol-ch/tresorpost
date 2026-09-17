@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/common";
-import { fetchSecret, deleteSecret, fetchConfig, sendContentReport } from "./api";
+import { fetchSecret, deleteSecret, fetchConfig, mintShareUrl, sendContentReport } from "./api";
 import { decryptBytes, base64UrlToBytes, type StreamMeta, type StreamHeader } from "./crypto";
 import { decodePayload, base64ToBlob, type SecretPayload } from "./payload";
-import { displayHTML, RICH_TEXT_SANITIZE } from "./richText";
+import { displayHTML, htmlToMarkdown, TEXT_NOTE_MARKDOWN_FILENAME, RICH_TEXT_SANITIZE } from "./richText";
 import {
   parseMeta,
   readHeader,
@@ -77,6 +77,13 @@ function RenderedText({ html }: { html: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const fullText = useRef<string>("");
   const [copied, setCopied] = useState(false);
+  const markdown = useMemo(() => htmlToMarkdown(html), [html]);
+  const mdUrl = useMemo(
+    () =>
+      URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" })),
+    [markdown],
+  );
+  useEffect(() => () => URL.revokeObjectURL(mdUrl), [mdUrl]);
 
   useEffect(() => {
     const el = ref.current;
@@ -138,6 +145,11 @@ function RenderedText({ html }: { html: string }) {
           __html: displayHTML(DOMPurify.sanitize(html, RICH_TEXT_SANITIZE)),
         }}
       />
+      <Button asChild>
+        <a href={mdUrl} download={TEXT_NOTE_MARKDOWN_FILENAME}>
+          {t("view.downloadMd")}
+        </a>
+      </Button>
     </div>
   );
 }
@@ -576,8 +588,7 @@ function S3FileView({
 const MAX_REPORT_MESSAGE = 2000;
 
 function reportViewUrl(id: string, keyB64Url: string, recipientDeleteToken?: string): string {
-  const token = recipientDeleteToken ? `/${recipientDeleteToken}` : "";
-  return `${window.location.origin}/#/v/${id}/${keyB64Url}${token}`;
+  return mintShareUrl(window.location.origin, id, keyB64Url, recipientDeleteToken);
 }
 
 function ViewChrome({
