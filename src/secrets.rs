@@ -365,4 +365,19 @@ mod tests {
         assert!(!s.contains("ciphertext"));
         assert!(!s.contains("admin"));
     }
+
+    #[test]
+    fn config_mints_on_public_origin_not_short_host() {
+        let json = serde_json::to_value(&ConfigResp {
+            max_file_bytes: 1,
+            s3_enabled: false,
+            max_s3_file_bytes: 0,
+            email_enabled: false,
+            report_enabled: false,
+            public_origin: Some("https://tresorpost.ch".into()),
+        })
+        .unwrap();
+        assert_eq!(json["public_origin"], "https://tresorpost.ch");
+        assert!(json.get("short_origin").is_none());
+    }
 }

@@ -69,6 +69,11 @@ export interface AppConfig {
   public_origin?: string;
 }
 
+/** Origin for `#/v` and `#/d` URLs: `PUBLIC_URL` when set, else the page origin. */
+export function shareLinkOrigin(cfg: Pick<AppConfig, "public_origin">, pageOrigin: string): string {
+  return (cfg.public_origin || pageOrigin).replace(/\/$/, "");
+}
+
 export async function fetchConfig(): Promise<AppConfig> {
   const res = await fetch("/api/config");
   if (!res.ok) throw new Error(`request failed (${res.status})`);

@@ -14,7 +14,7 @@ import {
   type SecretKind,
   type SecretPayload,
 } from "./payload";
-import { createSecret, fetchConfig, sendShareEmail } from "./api";
+import { createSecret, fetchConfig, sendShareEmail, shareLinkOrigin } from "./api";
 import { uploadLargeFile } from "./largeFile";
 import { EXPIRY_OPTIONS, MAX_FILE_BYTES, humanSize, uploadMaxBytes } from "./options";
 import { copyText } from "./clipboard";
@@ -125,9 +125,7 @@ export function CreatePage() {
         setS3Enabled(cfg.s3_enabled);
         setMaxS3FileBytes(cfg.max_s3_file_bytes);
         setEmailEnabled(Boolean(cfg.email_enabled));
-        if (cfg.public_origin) {
-          setShareOrigin(cfg.public_origin.replace(/\/$/, ""));
-        }
+        setShareOrigin(shareLinkOrigin(cfg, window.location.origin));
       })
       .catch(() => {
         /* keep the default limit if config is unavailable */
