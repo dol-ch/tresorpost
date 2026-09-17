@@ -105,7 +105,7 @@ function NavLink({
       href={href}
       onClick={(event) => (onClick ? onClick(event) : onInternalClick(event, href))}
       className={cn(
-        "rounded-[9px] px-2.5 py-1.5 font-sans text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        "shrink-0 rounded-[9px] px-1.5 py-1.5 font-sans text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:px-2.5 sm:text-sm",
         active && "text-primary hover:text-primary",
       )}
     >
@@ -191,9 +191,9 @@ export function App() {
   const githubLink = brand.footerLinks.find((l) => isGitHubHost(l.href));
 
   return (
-    <div className="flex min-h-svh flex-col bg-background text-foreground">
-      <div className="mx-auto w-full max-w-[720px] px-5 pt-7 pb-18 sm:px-5">
-        <nav className="mb-7 flex flex-nowrap items-center gap-1" aria-label={t("nav.primary")}>
+    <div className="flex min-h-svh min-w-0 max-w-full flex-col overflow-x-clip bg-background text-foreground">
+      <div className="mx-auto w-full min-w-0 max-w-[720px] px-4 pt-7 pb-18 sm:px-5">
+        <nav className="mb-7 flex min-w-0 flex-wrap items-center gap-x-0.5 gap-y-1" aria-label={t("nav.primary")}>
           <a
             className="mr-auto inline-flex min-w-0 shrink items-center gap-2 whitespace-nowrap"
             href="/"
@@ -256,23 +256,23 @@ export function App() {
                   {isGitHubHost(l.href) ? t("footer.source") : l.label}
                 </a>
               ))}
-              {__COMMIT_HASH__ && (
+              {__APP_VERSION__ && (
                 githubLink ? (
                   <a
-                    href={`${githubLink.href.replace(/\/+$/, "")}/commit/${__COMMIT_HASH__}`}
+                    href={`${githubLink.href.replace(/\/+$/, "")}/releases/tag/v${__APP_VERSION__}`}
                     target="_blank"
                     rel="noreferrer"
                     className="font-mono text-xs opacity-75 hover:opacity-100"
-                    title={`Commit ${__COMMIT_HASH__}`}
+                    title={`Tresorpost v${__APP_VERSION__}`}
                   >
-                    #{__COMMIT_HASH__}
+                    v{__APP_VERSION__}
                   </a>
                 ) : (
                   <span
                     className="font-mono text-xs opacity-75"
-                    title={`Commit ${__COMMIT_HASH__}`}
+                    title={`Tresorpost v${__APP_VERSION__}`}
                   >
-                    #{__COMMIT_HASH__}
+                    v{__APP_VERSION__}
                   </span>
                 )
               )}

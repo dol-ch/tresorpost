@@ -98,6 +98,7 @@ export const uk: Record<MessageKey, string> = {
   "view.destroyedBody":
     "Шифротекст стерто із сервера. Хто відкриє посилання тепер, нічого не побачить.",
   "view.createAnother": "Створити ще одну",
+  "view.createNew": "Створити новий секрет",
   "view.couldNotOpen": "Не вдалося відкрити",
   "view.error": "Помилка",
   "view.goHome": "На головну",

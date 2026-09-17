@@ -1,7 +1,25 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
+
+/** SPA navigate to a fresh compose screen (view links live in the hash). */
+export function navigateToCompose(event?: MouseEvent<HTMLAnchorElement>) {
+  if (
+    event &&
+    (event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey)
+  ) {
+    return;
+  }
+  event?.preventDefault();
+  window.history.pushState(null, "", "/");
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
 
 /** Small uppercase field/section label used throughout the app. */
 export function Kicker({
@@ -65,10 +83,24 @@ export function EmptyState({
       <p className="max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
         {description}
       </p>
-      <Button className="mt-1.5 max-w-70" asChild>
-        <a href={cta.href}>{cta.label}</a>
+      <Button className="mt-1.5 w-full max-w-70" asChild>
+        <a href="/" onClick={navigateToCompose}>
+          {cta.label}
+        </a>
       </Button>
     </div>
+  );
+}
+
+/** Full-width compose CTA under decrypted notes, files, and errors. */
+export function CreateNewSecretButton({ className }: { className?: string }) {
+  const t = useT();
+  return (
+    <Button className={cn("w-full", className)} asChild>
+      <a href="/" onClick={navigateToCompose}>
+        {t("view.createNew")}
+      </a>
+    </Button>
   );
 }
 

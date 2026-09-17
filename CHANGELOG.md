@@ -11,6 +11,40 @@ compatibility promise.
 Add entries here as you go, under `Added` / `Changed` / `Fixed` /
 `Security`, then fold them into a dated release section when you cut one.
 
+## [0.1.34] — 2026-09-17
+
+### Added
+
+- "Create a new secret" button under decrypted notes, files, and view errors.
+
+## [0.1.33] — 2026-09-17
+
+### Changed
+
+- Republish container images after GHCR packages were removed.
+
+## [0.1.32] — 2026-09-17
+
+### Added
+
+- Unit tests for S3 object-key shape and multipart upload validation
+  (no live bucket).
+
+## [0.1.31] — 2026-09-16
+
+### Fixed
+
+- No horizontal page scroll on narrow phones (viewport-fit, overflow clip,
+  wrapping nav / expiry / attach row).
+
+## [0.1.30] — 2026-09-16
+
+### Changed
+
+- Footer shows the crate/npm version (`v0.1.30` from `package.json` /
+  `Cargo.toml`) instead of a git commit hash, which Docker builds never
+  received.
+
 ## [0.1.27] and earlier — 2026-09-14 to 2026-09-16
 
 The first two days of development. Summarized by theme rather than by the

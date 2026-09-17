@@ -144,11 +144,11 @@
   * {
     @apply border-border outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
-    }
   html {
-    @apply font-sans;
+    @apply overflow-x-clip font-sans;
+    }
+  body {
+    @apply max-w-full overflow-x-clip bg-background text-foreground;
     }
   h1, h2 {
     @apply font-heading;
@@ -156,7 +156,7 @@
 }
 
 .editor-host .ProseMirror {
-  @apply min-h-[140px] p-3.5 text-[15px] leading-relaxed outline-none;
+  @apply min-h-[140px] min-w-0 overflow-x-auto p-3.5 text-[15px] leading-relaxed break-words outline-none;
 }
 .editor-host .ProseMirror.is-empty::before {
   content: attr(data-placeholder);

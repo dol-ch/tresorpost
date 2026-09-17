@@ -127,8 +127,8 @@ export const RichTextEditor = forwardRef<
   }));
 
   return (
-    <div ref={wrapRef}>
-      <div className="editor-host" ref={hostRef} />
+    <div ref={wrapRef} className="min-w-0">
+      <div className="editor-host min-w-0" ref={hostRef} />
       {view && <EditorToolbar view={view} />}
     </div>
   );

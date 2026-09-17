@@ -38,7 +38,7 @@ fn default_allow_delete_upload() -> bool {
     true
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct UploadInitResp {
     id: String,
     upload_id: String,
@@ -155,7 +155,7 @@ pub(crate) struct PartUrlReq {
     part_number: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct PartUrlResp {
     url: String,
 }
@@ -292,4 +292,264 @@ pub(crate) async fn upload_complete(
     }
 
     Ok(Json(serde_json::json!({ "status": "ready" })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::Ipv4Addr;
+    use std::sync::Mutex;
+
+    // Guards mutation of the S3_* env vars that S3Backend::from_env reads,
+    // so fake_s3_backend() is safe under cargo's parallel test runner.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    async fn test_state(s3: Option<S3Backend>) -> (AppState, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!(
+            "tresorpost-uploads-test-{}-{}",
+            std::process::id(),
+            rand::random::<u64>()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("data.db");
+        let pool = crate::db::init_db(&path.to_string_lossy()).await;
+        let state = AppState {
+            pool,
+            db_path: path.to_string_lossy().into_owned(),
+            admin_token: None,
+            max_file_bytes: 5 * 1024 * 1024,
+            max_ciphertext_chars: 1_000_000,
+            s3,
+            create_limiter: crate::rate::CreateLimiter::from_env(),
+            read_limiter: crate::rate::ReadLimiter::from_env(),
+            email_limiter: crate::rate::EmailLimiter::from_env(),
+            mailer: None,
+            admin_report_to: None,
+            admin_auth_limiter: crate::rate::AdminAuthLimiter::from_env(),
+            max_sqlite_bytes: 0,
+            max_s3_bytes: 0,
+            pending_upload_ttl_secs: 21_600,
+        };
+        (state, dir)
+    }
+
+    /// A real `S3Backend` pointed at a bogus local endpoint. Building the
+    /// client never touches the network — only calling its methods
+    /// (`create_multipart`, etc.) would — so this is safe to use for
+    /// exercising the validation branches in upload_init/_part_url/_complete
+    /// that return before any S3 call is made.
+    fn fake_s3_backend(max_file_bytes: i64) -> S3Backend {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        unsafe {
+            std::env::set_var("S3_ENDPOINT", "http://127.0.0.1:1");
+            std::env::set_var("S3_BUCKET", "test-bucket");
+            std::env::set_var("S3_ACCESS_KEY_ID", "test");
+            std::env::set_var("S3_SECRET_ACCESS_KEY", "test");
+        }
+        let backend = S3Backend::from_env(max_file_bytes).expect("fake s3 backend");
+        unsafe {
+            std::env::remove_var("S3_ENDPOINT");
+            std::env::remove_var("S3_BUCKET");
+            std::env::remove_var("S3_ACCESS_KEY_ID");
+            std::env::remove_var("S3_SECRET_ACCESS_KEY");
+        }
+        backend
+    }
+
+    fn peer() -> ConnectInfo<SocketAddr> {
+        ConnectInfo(SocketAddr::new(
+            std::net::IpAddr::V4(Ipv4Addr::new(203, 0, 113, 9)),
+            4242,
+        ))
+    }
+
+    fn valid_req() -> UploadInitReq {
+        UploadInitReq {
+            expires_in: 3600,
+            max_views: None,
+            kind: None,
+            total_size: 100,
+            part_size: 100,
+            part_count: 1,
+            meta: "m".into(),
+            allow_delete: true,
+            allow_recipient_delete: false,
+        }
+    }
+
+    #[tokio::test]
+    async fn upload_init_rejects_without_s3_configured() {
+        let (state, dir) = test_state(None).await;
+        let result = upload_init(State(state), peer(), HeaderMap::new(), Json(valid_req())).await;
+        assert_eq!(result.unwrap_err().0, StatusCode::SERVICE_UNAVAILABLE);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn upload_init_rejects_oversized_file() {
+        let (state, dir) = test_state(Some(fake_s3_backend(1_000))).await;
+        let req = UploadInitReq {
+            total_size: 2_000,
+            ..valid_req()
+        };
+        let result = upload_init(State(state), peer(), HeaderMap::new(), Json(req)).await;
+        assert_eq!(result.unwrap_err().0, StatusCode::PAYLOAD_TOO_LARGE);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn upload_init_rejects_invalid_part_count() {
+        let (state, dir) = test_state(Some(fake_s3_backend(10_000_000))).await;
+        for bad in [0, 10_001] {
+            let req = UploadInitReq {
+                part_count: bad,
+                ..valid_req()
+            };
+            let result =
+                upload_init(State(state.clone()), peer(), HeaderMap::new(), Json(req)).await;
+            assert_eq!(
+                result.unwrap_err().0,
+                StatusCode::BAD_REQUEST,
+                "part_count={bad}"
+            );
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn upload_init_rejects_empty_or_oversized_meta() {
+        let (state, dir) = test_state(Some(fake_s3_backend(10_000_000))).await;
+        let empty = UploadInitReq {
+            meta: "".into(),
+            ..valid_req()
+        };
+        let result = upload_init(State(state.clone()), peer(), HeaderMap::new(), Json(empty)).await;
+        assert_eq!(result.unwrap_err().0, StatusCode::BAD_REQUEST);
+
+        let oversized = UploadInitReq {
+            meta: "x".repeat(64 * 1024 + 1),
+            ..valid_req()
+        };
+        let result = upload_init(State(state), peer(), HeaderMap::new(), Json(oversized)).await;
+        assert_eq!(result.unwrap_err().0, StatusCode::BAD_REQUEST);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn upload_init_rejects_expires_in_out_of_range() {
+        let (state, dir) = test_state(Some(fake_s3_backend(10_000_000))).await;
+        for bad in [MIN_EXPIRES - 1, MAX_EXPIRES + 1] {
+            let req = UploadInitReq {
+                expires_in: bad,
+                ..valid_req()
+            };
+            let result =
+                upload_init(State(state.clone()), peer(), HeaderMap::new(), Json(req)).await;
+            assert_eq!(
+                result.unwrap_err().0,
+                StatusCode::BAD_REQUEST,
+                "expires_in={bad}"
+            );
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn upload_init_rejects_zero_max_views() {
+        let (state, dir) = test_state(Some(fake_s3_backend(10_000_000))).await;
+        let req = UploadInitReq {
+            max_views: Some(0),
+            ..valid_req()
+        };
+        let result = upload_init(State(state), peer(), HeaderMap::new(), Json(req)).await;
+        assert_eq!(result.unwrap_err().0, StatusCode::BAD_REQUEST);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn upload_part_url_rejects_out_of_range_part_number() {
+        let (state, dir) = test_state(Some(fake_s3_backend(10_000_000))).await;
+        for bad in [0, 10_001] {
+            let result = upload_part_url(
+                State(state.clone()),
+                Path("someid".to_string()),
+                Json(PartUrlReq { part_number: bad }),
+            )
+            .await;
+            assert_eq!(
+                result.unwrap_err().0,
+                StatusCode::BAD_REQUEST,
+                "part_number={bad}"
+            );
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn upload_part_url_rejects_without_s3_configured() {
+        let (state, dir) = test_state(None).await;
+        let result = upload_part_url(
+            State(state),
+            Path("someid".to_string()),
+            Json(PartUrlReq { part_number: 1 }),
+        )
+        .await;
+        assert_eq!(result.unwrap_err().0, StatusCode::SERVICE_UNAVAILABLE);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn upload_complete_rejects_empty_parts() {
+        let (state, dir) = test_state(Some(fake_s3_backend(10_000_000))).await;
+        let result = upload_complete(
+            State(state),
+            Path("someid".to_string()),
+            Json(CompleteReq { parts: vec![] }),
+        )
+        .await;
+        assert_eq!(result.unwrap_err().0, StatusCode::BAD_REQUEST);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn pending_upload_returns_not_found_for_unknown_id() {
+        let (state, dir) = test_state(None).await;
+        let result = pending_upload(&state.pool, "nope").await;
+        assert_eq!(result.unwrap_err().0, StatusCode::NOT_FOUND);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn pending_upload_returns_key_and_upload_id_for_pending_row() {
+        let (state, dir) = test_state(None).await;
+        sqlx::query(
+            "INSERT INTO secrets (id, ciphertext, nonce, created_at, expires_at, views, kind, size, storage, status, s3_key, upload_id) \
+             VALUES ('up1', '', '', 0, 999999999, 0, 'file', 10, 's3', 'pending', 'tresorpost/xyz', 'upload-abc')",
+        )
+        .execute(&state.pool)
+        .await
+        .unwrap();
+        let (key, upload_id) = pending_upload(&state.pool, "up1").await.unwrap();
+        assert_eq!(key, "tresorpost/xyz");
+        assert_eq!(upload_id, "upload-abc");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn pending_upload_ignores_ready_rows() {
+        // A completed upload has already flipped `status` to 'ready' — the
+        // part-url/complete endpoints must not resume writing to a finished
+        // object.
+        let (state, dir) = test_state(None).await;
+        sqlx::query(
+            "INSERT INTO secrets (id, ciphertext, nonce, created_at, expires_at, views, kind, size, storage, status, s3_key, upload_id) \
+             VALUES ('done1', '', '', 0, 999999999, 0, 'file', 10, 's3', 'ready', 'tresorpost/xyz', 'upload-abc')",
+        )
+        .execute(&state.pool)
+        .await
+        .unwrap();
+        let result = pending_upload(&state.pool, "done1").await;
+        assert_eq!(result.unwrap_err().0, StatusCode::NOT_FOUND);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

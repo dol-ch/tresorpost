@@ -97,6 +97,7 @@ export const de = {
   "view.destroyedBody":
     "Der Ciphertext ist vom Server gewischt. Wer den Link jetzt öffnet, sieht nichts.",
   "view.createAnother": "Weitere Notiz erstellen",
+  "view.createNew": "Neues Geheimnis erstellen",
   "view.couldNotOpen": "Konnte nicht geöffnet werden",
   "view.error": "Fehler",
   "view.goHome": "Zur Startseite",

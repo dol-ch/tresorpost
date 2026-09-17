@@ -23,7 +23,7 @@ export function Segmented<T extends string | number>({
       role="group"
       aria-label={ariaLabel}
       className={cn(
-        "flex gap-0.5 rounded-[12px] bg-muted p-[3px]",
+        "flex min-w-0 w-full gap-0.5 overflow-x-auto rounded-[12px] bg-muted p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
     >
@@ -36,7 +36,7 @@ export function Segmented<T extends string | number>({
             aria-pressed={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "flex-1 whitespace-nowrap rounded-[9px] px-2.5 py-[9px] font-sans text-[13.5px] font-medium text-muted-foreground transition-colors",
+              "min-w-0 flex-1 whitespace-nowrap rounded-[9px] px-1.5 py-[9px] font-sans text-[13px] font-medium text-muted-foreground transition-colors sm:px-2.5 sm:text-[13.5px]",
               active && "bg-card text-foreground font-semibold shadow-[0_1px_3px_rgba(0,0,0,.08)]",
             )}
           >
