@@ -171,7 +171,7 @@ pub(crate) struct CreateResp {
     pub(crate) recipient_delete_token: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) struct ApiError {
     error: String,
 }

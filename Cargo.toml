@@ -43,6 +43,12 @@ aws-sdk-s3 = { version = "1", default-features = false, features = [
 aws-credential-types = "1"
 lettre = { version = "0.11.23", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
 
+[dev-dependencies]
+# Only for constructing fake S3 errors in src/s3.rs tests (already a
+# transitive dependency via aws-sdk-s3; listed directly so `use` compiles
+# under edition 2024's dependency visibility rules).
+aws-smithy-types = "1"
+
 [profile.release]
 opt-level = 2
 
