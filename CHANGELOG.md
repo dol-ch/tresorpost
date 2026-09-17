@@ -11,6 +11,13 @@ compatibility promise.
 Add entries here as you go, under `Added` / `Changed` / `Fixed` /
 `Security`, then fold them into a dated release section when you cut one.
 
+## [0.1.32] — 2026-09-17
+
+### Added
+
+- Unit tests for S3 object-key shape and multipart upload validation
+  (no live bucket).
+
 ## [0.1.31] — 2026-09-16
 
 ### Fixed
