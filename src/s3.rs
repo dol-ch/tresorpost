@@ -260,3 +260,67 @@ fn is_missing(e: &impl ProvideErrorMetadata) -> bool {
         Some("NoSuchKey" | "NoSuchUpload" | "NotFound" | "404")
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aws_smithy_types::error::metadata::ErrorMetadata;
+    use std::collections::HashSet;
+
+    fn meta_with_code(code: &str) -> ErrorMetadata {
+        ErrorMetadata::builder().code(code).build()
+    }
+
+    #[test]
+    fn random_key_has_stable_shape() {
+        let key = S3Backend::random_key();
+        let name = key
+            .strip_prefix("tresorpost/")
+            .expect("key must live under the tresorpost/ prefix (relied on by the orphan reaper and bucket lifecycle rule)");
+        assert_eq!(name.len(), 32, "key body length changed: {name}");
+        assert!(
+            name.chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()),
+            "key must be lowercase alphanumeric only (safe as an S3 key/URL path segment): {name}"
+        );
+    }
+
+    #[test]
+    fn random_key_is_unpredictable() {
+        // Object keys are the only thing standing between "list the bucket"
+        // and "read someone else's file" for anyone without the encryption
+        // key. 200 draws should never collide and should not repeat a
+        // predictable pattern.
+        let keys: HashSet<String> = (0..200).map(|_| S3Backend::random_key()).collect();
+        assert_eq!(
+            keys.len(),
+            200,
+            "random_key produced a collision in 200 draws"
+        );
+    }
+
+    #[test]
+    fn is_missing_recognizes_known_not_found_codes() {
+        for code in ["NoSuchKey", "NoSuchUpload", "NotFound", "404"] {
+            assert!(
+                is_missing(&meta_with_code(code)),
+                "expected {code} to count as missing"
+            );
+        }
+    }
+
+    #[test]
+    fn is_missing_rejects_other_errors() {
+        // A real failure (e.g. AccessDenied, InternalError) must NOT be
+        // swallowed as "already gone" — the sweeper/delete path would
+        // silently drop a row while the object is still live in the bucket.
+        for code in ["AccessDenied", "InternalError", "SlowDown", ""] {
+            assert!(
+                !is_missing(&meta_with_code(code)),
+                "expected {code:?} to NOT count as missing"
+            );
+        }
+        let no_code = ErrorMetadata::builder().build();
+        assert!(!is_missing(&no_code));
+    }
+}
